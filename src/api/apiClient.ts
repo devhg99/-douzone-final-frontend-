@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL, // 서버 주소를 여기에 설정할 거야
+  baseURL: process.env.REACT_APP_API_BASE_URL, // CRA에서는 process.env 사용
   withCredentials: true,
 });
 
