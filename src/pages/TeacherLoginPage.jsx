@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 import logo from '../assets/images/logo_login.svg';
-import { useState } from 'react';
+import { useNavigate } from 'react-router-dom'; // ✅ navigate 추가
 
 const TeacherLoginPage = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
+  const navigate = useNavigate(); // ✅ 훅 초기화
 
   const handleInputChange = e => {
     const { name, value } = e.target;
@@ -23,10 +24,11 @@ const TeacherLoginPage = () => {
       });
 
       console.log('✅ 로그인 성공:', response.data);
-      // TODO: 로그인 성공 시 상태 저장 또는 페이지 이동 등 추가
+
+      // ✅ 로그인 성공 시 대시보드로 이동
+      navigate('/dashboard');
     } catch (error) {
       console.error('❌ 로그인 실패:', error.response?.data || error.message);
-      // TODO: 사용자에게 에러 메시지 표시 추가 가능
     }
   };
 
