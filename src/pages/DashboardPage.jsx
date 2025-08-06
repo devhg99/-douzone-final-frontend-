@@ -1,10 +1,12 @@
 import React from 'react';
 
-export default function DashboardPage() {
+const Dashboard = () => {
   return (
-    <div className="p-6">
-      <h2 className="text-xl font-bold mb-4">대시보드</h2>
-      <p>교사용 메인 홈화면입니다.</p>
+    <div className="p-10">
+      <h1 className="text-2xl font-bold">대시보드</h1>
+      <p className="mt-4">이곳은 로그인 후 이동하는 교사용 대시보드입니다.</p>
     </div>
   );
-}
+};
+
+export default Dashboard;
