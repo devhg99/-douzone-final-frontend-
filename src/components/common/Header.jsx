@@ -1,6 +1,34 @@
 import React from 'react';
+import { useLocation } from 'react-router-dom';
 
 const Header = () => {
+  const location = useLocation();
+
+  // 경로 → 타이틀 매핑
+  const titleMap = {
+    '/dashboard': '대시보드',
+    '/attendance': '출결관리',
+    '/grades': '성적평가',
+    '/progress': '진도 및 과제관리',
+    '/reports': '보고서 작성',
+    '/counseling': '상담관리',
+    '/lifeGuidance': '생활지도',
+    '/studentInfo': '학생 특이사항',
+    '/homeLetter': '가정통신문',
+    '/notice': '공지사항',
+    '/staffCollaboration': '교직원 협업',
+    '/classSchedule': '학급 일정',
+    '/timetable': '시간표 관리',
+    '/events': '교내 행사',
+    '/documents': '행정 서류',
+    '/facility': '교실 환경',
+    '/survey': '조사·설문',
+  };
+
+  // 현재 경로를 기반으로 타이틀 추출
+  const currentPath = location.pathname;
+  const currentTitle = titleMap[currentPath] || '페이지';
+
   const today = new Date().toLocaleDateString('ko-KR', {
     year: 'numeric',
     month: 'long',
@@ -9,11 +37,11 @@ const Header = () => {
   });
 
   return (
-    <header className="flex w-full min-h-[94px] px-4 lg:px-8 py-3 justify-center items-center border-b border-[#E1E5E9] bg-white">
+    <header className="flex w-full min-h-[94px] px-4 py-3 justify-start items-center border-b border-[#E1E5E9] bg-white">
       <div className="flex w-full max-w-[1124px] flex-col lg:flex-row justify-between items-start lg:items-center gap-4 lg:gap-0">
         {/* Left Section - Title Group */}
         <div className="flex flex-col items-start gap-[7px]">
-          <h1 className="text-[24px] font-bold text-[#2C3E50] leading-normal">대시보드</h1>
+          <h1 className="text-[24px] font-bold text-[#2C3E50] leading-normal">{currentTitle}</h1>
           <p className="text-[14px] font-medium text-[#7F8C8D] leading-normal">
             6학년 2반 - {today}
           </p>
@@ -26,13 +54,14 @@ const Header = () => {
             👤 김선생님
           </span>
 
-          {/* Action Buttons Container */}
+          {/* Action Buttons */}
           <div className="flex items-center gap-[13px] order-2 sm:order-none">
             {/* Chat Toggle Button */}
             <button
               className="w-[72px] h-[72px] flex items-center justify-center hover:opacity-80 transition-opacity"
               aria-label="채팅 토글"
             >
+              {/* Chatbot Icon */}
               <svg
                 width="73"
                 height="72"
