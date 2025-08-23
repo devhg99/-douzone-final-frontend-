@@ -25,6 +25,7 @@ jobs:
 
       # --- SSH 준비 ---
       - name: Prepare SSH
+        shell: bash
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
