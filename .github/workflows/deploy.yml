@@ -1,1 +1,75 @@
+name: Deploy React to EC2 (nginx)
+
+on:
+  push:
+    branches: [ "main" ]   # main에 push/merge될 때 배포
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ secrets.NODE_VERSION || '20' }}
+          cache: 'npm'
+
+      - name: Install deps & Build
+        run: |
+          npm ci
+          npm run build
+
+      # --- SSH 준비 ---
+      - name: Prepare SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      # --- 원격 릴리즈 디렉터리 생성(타임스탬프) & 업로드 ---
+      - name: Set release name
+        id: rel
+        run: echo "RELEASE_DIR=release_$(date +%Y%m%d%H%M%S)" >> $GITHUB_OUTPUT
+
+      - name: Create release dir on EC2
+        run: |
+          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} \
+            "mkdir -p ${{ secrets.EC2_DEPLOY_PATH }}/releases/${{ steps.rel.outputs.RELEASE_DIR }}"
+
+      - name: Rsync build to EC2 (release)
+        run: |
+          rsync -az --delete -e "ssh -i ~/.ssh/id_rsa" \
+            build/ \
+            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:${{ secrets.EC2_DEPLOY_PATH }}/releases/${{ steps.rel.outputs.RELEASE_DIR }}/
+
+      # --- 심볼릭 링크 전환(무중단에 가깝게) & nginx reload ---
+      - name: Activate release & Reload nginx
+        run: |
+          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+          set -e
+          DEPLOY_PATH="${{ secrets.EC2_DEPLOY_PATH }}"
+          RELEASE="${{ steps.rel.outputs.RELEASE_DIR }}"
+
+          # 심볼릭 링크 교체 (current -> 새 릴리즈)
+          ln -sfn "$DEPLOY_PATH/releases/$RELEASE" "$DEPLOY_PATH/current"
+
+          # 퍼미션 (nginx가 읽을 수 있으면 충분)
+          chmod -R u=rwX,go=rX "$DEPLOY_PATH/releases/$RELEASE"
+
+          # nginx 설정 확인 후 reload
+          if sudo nginx -t; then
+            sudo systemctl reload nginx || sudo systemctl restart nginx
+          else
+            echo "nginx config test failed"; exit 1
+          fi
+
+          # (선택) 오래된 릴리즈 정리: 최근 5개만 남기기
+          cd "$DEPLOY_PATH/releases"
+          ls -1t | tail -n +6 | xargs -r rm -rf
+          EOF
 
