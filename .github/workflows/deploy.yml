@@ -3,67 +3,53 @@ name: Frontend CI/CD
 on:
   push:
     branches: [ "main" ]
-    paths: [ "**" ]  # 이 리포 전체
-
-env:
-  AWS_REGION: ap-northeast-2
-  AWS_ACCOUNT_ID: 373317459179
-  ECR_REPO: web/frontend
-  IMAGE_TAG: latest
-
-permissions:
-  id-token: write
-  contents: read
 
 jobs:
-  build_and_push:
+  build-push-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      AWS_REGION: ap-northeast-2
+      ECR_REPO: 373317459179.dkr.ecr.ap-northeast-2.amazonaws.com/web/frontend
+      FRONT_IMAGE: ${{ env.ECR_REPO }}:latest
+      FRONT_IMAGE_SHA: ${{ env.ECR_REPO }}:${{ github.sha }}
+      INSTANCE_TAG_ROLE: frontend
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure AWS credentials (OIDC)
+      - name: Configure AWS (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::373317459179:role/github-actions-ecr-pusher
+          role-to-assume: arn:aws:iam::<ACCOUNT_ID>:role/GHA_OIDC_ECR_SSM_ROLE
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build & Push (Docker)
-        uses: docker/build-push-action@v6
-        with:
-          context: ./frontend
-          file: ./frontend/Dockerfile
-          build-args: |
-            REACT_APP_API_BASE_URL=/v1
-          push: true
-          tags: |
-            ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${{ env.IMAGE_TAG }}
-            ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${{ github.sha }}
-
-  deploy:
-    needs: build_and_push
-    runs-on: ubuntu-latest
-    steps:
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::373317459179:role/github-actions-ecr-pusher
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Deploy via SSM (by tag Role=frontend)
+      - name: Docker build
+        working-directory: ./frontend
         run: |
-          set -eux
-          FRONT_IMAGE="${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:latest"
+          docker build -t $FRONT_IMAGE -t $FRONT_IMAGE_SHA .
+          docker push $FRONT_IMAGE
+          docker push $FRONT_IMAGE_SHA
+
+      # === 배포: SSM RunCommand (Public EC2) ===
+      - name: Deploy via SSM
+        run: |
           aws ssm send-command \
             --document-name "AWS-RunShellScript" \
-            --targets "Key=tag:Role,Values=frontend" \
-            --parameters 'commands=[
-              "set -eux",
-              "cd /opt/frontend",
-              "FRONT_IMAGE='"$FRONT_IMAGE"' docker compose pull",
-              "FRONT_IMAGE='"$FRONT_IMAGE"' docker compose up -d"
-            ]' \
             --comment "Deploy frontend" \
-            --region ${{ env.AWS_REGION }}
+            --targets "Key=tag:Role,Values=${INSTANCE_TAG_ROLE}" \
+            --parameters commands='[
+              "set -eux",
+              "aws --region '${AWS_REGION}' ecr get-login-password | docker login --username AWS --password-stdin '${ECR_REPO%/*}'",
+              "cd /opt/frontend",
+              "echo FRONT_IMAGE='${FRONT_IMAGE}' > .env",
+              "docker compose pull",
+              "docker compose up -d",
+              "docker image prune -f"
+            ]' \
+            --region $AWS_REGION
