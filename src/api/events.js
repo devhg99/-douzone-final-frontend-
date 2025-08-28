@@ -53,6 +53,33 @@ export const getMonthlyEvents = async (year, month) => {
 };
 
 /**
+ * 주간 이벤트 조회
+ * @param {string} startDate - 시작일 (YYYY-MM-DD)
+ * @param {string} endDate - 종료일 (YYYY-MM-DD)
+ * @returns {Promise<Array>} 해당 주의 이벤트 목록
+ */
+export const getWeeklyEvents = async (startDate, endDate) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/events/weekly?start_date=${startDate}&end_date=${endDate}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.data || [];
+  } catch (error) {
+    console.error('주간 이벤트 조회 중 오류:', error);
+    throw error;
+  }
+};
+
+/**
  * 이벤트 타입에 따른 색상 매핑
  * @param {string} eventType - 이벤트 타입
  * @returns {string} CSS 클래스명
