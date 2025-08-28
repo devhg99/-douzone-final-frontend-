@@ -1,20 +1,45 @@
 import React from "react";
 
 export default function SummarySection({ data }) {
-  const rows = Array.isArray(data)
-    ? data.map((r) => [r.label ?? "", r.content ?? ""])
-    : [
-        ["출결", data?.attendance ?? ""],
-        ["성적", data?.grades ?? ""],
-        ["행동특성", data?.behavior ?? ""],
-      ];
+  if (!data) {
+    return (
+      <section className="w-full max-w-[1100px] border border-[#E1E5E9] rounded bg-white">
+        <p className="p-4 text-sm text-gray-500">학생을 선택하면 요약이 표시됩니다</p>
+      </section>
+    );
+  }
 
-  const isEmpty =
-    !data ||
-    (Array.isArray(data) && data.every((r) => !r?.content)) ||
-    (!Array.isArray(data) && !data?.attendance && !data?.grades && !data?.behavior);
+  // ✅ 출결 요약
+  const attendanceSummary = data.attendance?.length
+    ? `${data.attendance.length}일 기록 (결석 ${data.attendance.filter(a => a.status === "결석").length}회)`
+    : "출결 데이터 없음";
 
-  const emptyMsg = "학생을 선택하면 요약이 표시됩니다";
+  // ✅ 성적 요약 (상위 3과목만 표시)
+  const gradesSummary = data.grades?.length
+    ? data.grades.slice(0, 3).map(g => `${g.subject} ${g.score}`).join(" / ")
+    : "성적 데이터 없음";
+
+  // ✅ 행동특성 요약 (reports 배열의 최신 데이터 기준)
+  const latestReport = Array.isArray(data.reports) && data.reports.length > 0
+    ? data.reports[data.reports.length - 1]
+    : null;
+
+  const behaviorSummary = latestReport
+    ? [
+        latestReport.behavior_summary,
+        latestReport.peer_relation,
+        latestReport.career_aspiration,
+        latestReport.teacher_feedback,
+      ]
+        .filter(Boolean) // 값이 있는 것만
+        .join(" / ")
+    : "행동특성 데이터 없음";
+
+  const rows = [
+    ["출결", attendanceSummary],
+    ["성적", gradesSummary],
+    ["행동특성", behaviorSummary],
+  ];
 
   return (
     <section className="w-full max-w-[1100px] border border-[#E1E5E9] rounded bg-white">
@@ -28,28 +53,16 @@ export default function SummarySection({ data }) {
         </div>
       </div>
 
-      {/* 디폴트 표시: 3행 */}
-      {isEmpty
-        ? ["출결", "성적", "행동특성"].map((label, i) => (
-            <div key={i} className="grid grid-cols-2 h-[35px]" role="row">
-              <div className="bg-[#ECF0F1] flex items-center justify-center px-4" role="cell">
-                <span className="text-[#2C3E50] text-[11px]">{label}</span>
-              </div>
-              <div className="bg-white flex items-center px-4" role="cell">
-                <span className="text-[#7f8c8d] text-[11px]">{emptyMsg}</span>
-              </div>
-            </div>
-          ))
-        : rows.map(([label, content], idx) => (
-            <div key={`${label}-${idx}`} className="grid grid-cols-2 h-[35px]" role="row">
-              <div className="bg-[#ECF0F1] flex items-center justify-center px-4" role="cell">
-                <span className="text-[#2C3E50] text-[11px]">{label}</span>
-              </div>
-              <div className="bg-white flex items-center px-4" role="cell">
-                <span className="text-[#2C3E50] text-[11px] break-words">{content || "-"}</span>
-              </div>
-            </div>
-          ))}
+      {rows.map(([label, content], idx) => (
+        <div key={`${label}-${idx}`} className="grid grid-cols-2 h-[35px]" role="row">
+          <div className="bg-[#ECF0F1] flex items-center justify-center px-4" role="cell">
+            <span className="text-[#2C3E50] text-[11px]">{label}</span>
+          </div>
+          <div className="bg-white flex items-center px-4" role="cell">
+            <span className="text-[#2C3E50] text-[11px] break-words">{content || "-"}</span>
+          </div>
+        </div>
+      ))}
     </section>
   );
 }

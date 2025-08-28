@@ -1,3 +1,5 @@
+import React from "react";
+
 // src/pages/LifeRecord/sections/ActionBar.jsx
 export default function ActionBar({
   onRegenerate,
