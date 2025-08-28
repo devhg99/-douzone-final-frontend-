@@ -35,7 +35,7 @@ jobs:
         with:
           context: .
           build-args: |
-            REACT_APP_API_BASE_URL=/api
+            REACT_APP_API_BASE_URL=/v1
           push: true
           tags: |
             ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${{ env.IMAGE_TAG }}
