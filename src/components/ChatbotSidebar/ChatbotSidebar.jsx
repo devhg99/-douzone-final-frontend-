@@ -14,18 +14,21 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
   ]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSendMessage = async (userMessage) => {
+  const handleSendMessage = async (userMessage, silent = false) => {
     if (!userMessage.trim()) return;
 
-    // 사용자 메시지 추가
-    const userMsg = {
-      id: Date.now(),
-      message: userMessage,
-      isUser: true,
-      timestamp: new Date()
-    };
+    // 사용자 메시지 추가 (silent 모드가 아닐 때만)
+    if (!silent) {
+      const userMsg = {
+        id: Date.now(),
+        message: userMessage,
+        isUser: true,
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, userMsg]);
+    }
     
-    setMessages(prev => [...prev, userMsg]);
     setIsLoading(true);
 
     try {
@@ -92,7 +95,8 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
               <ChatMessage 
                 key={msg.id}
                 message={msg.message} 
-                isUser={msg.isUser} 
+                isUser={msg.isUser}
+                onSendMessage={handleSendMessage}
               />
             ))}
             {isLoading && (
