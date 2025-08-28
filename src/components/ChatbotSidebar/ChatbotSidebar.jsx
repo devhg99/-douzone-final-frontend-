@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
 import { sendChatMessage } from '../../api/chatbot';
 
 const ChatbotSidebar = ({ isOpen, onClose }) => {
+  const messagesEndRef = useRef(null);
+  
   const [messages, setMessages] = useState([
     {
       id: 1,
@@ -13,6 +15,15 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
     }
   ]);
   const [isLoading, setIsLoading] = useState(false);
+
+  // 메시지가 추가될 때마다 스크롤을 아래로 이동
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const handleSendMessage = async (userMessage, silent = false) => {
     if (!userMessage.trim()) return;
@@ -117,6 +128,8 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
                 </div>
               </div>
             )}
+            {/* 스크롤을 위한 빈 div */}
+            <div ref={messagesEndRef} />
           </div>
         </div>
 
