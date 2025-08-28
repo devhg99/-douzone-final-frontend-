@@ -1,8 +1,63 @@
-import React from 'react';
+import React, { useState } from 'react';
 import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
+import { sendChatMessage } from '../../api/chatbot';
 
 const ChatbotSidebar = ({ isOpen, onClose }) => {
+  const [messages, setMessages] = useState([
+    {
+      id: 1,
+      message: "안녕하세요! 교사 업무를 도와드릴 수 있는 AI 어시스턴트입니다. 무엇을 도와드릴까요?",
+      isUser: false,
+      timestamp: new Date()
+    }
+  ]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSendMessage = async (userMessage) => {
+    if (!userMessage.trim()) return;
+
+    // 사용자 메시지 추가
+    const userMsg = {
+      id: Date.now(),
+      message: userMessage,
+      isUser: true,
+      timestamp: new Date()
+    };
+    
+    setMessages(prev => [...prev, userMsg]);
+    setIsLoading(true);
+
+    try {
+      // AI 응답 요청
+      const response = await sendChatMessage(userMessage);
+      
+      // AI 응답 추가
+      const aiMsg = {
+        id: Date.now() + 1,
+        message: response.response || "죄송합니다. 응답을 생성할 수 없습니다.",
+        isUser: false,
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, aiMsg]);
+    } catch (error) {
+      console.error('챗봇 응답 오류:', error);
+      
+      // 에러 메시지 추가
+      const errorMsg = {
+        id: Date.now() + 1,
+        message: "죄송합니다. 일시적인 오류가 발생했습니다. 다시 시도해주세요.",
+        isUser: false,
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, errorMsg]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <>
       {/* Sidebar */}
@@ -33,13 +88,37 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
         {/* Messages Area */}
         <div className="flex-1 overflow-y-auto bg-slate-50">
           <div className="p-6 space-y-4">
-            <ChatMessage message="안녕하세요! 교사 업무를 도와드릴 수 있는 AI 어시스턴트입니다. 무엇을 도와드릴까요?" isUser={false} />
+            {messages.map((msg) => (
+              <ChatMessage 
+                key={msg.id}
+                message={msg.message} 
+                isUser={msg.isUser} 
+              />
+            ))}
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="bg-white border border-slate-200 rounded-2xl px-4 py-3 shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 bg-gradient-to-r from-[#667EEA] to-[#764BA2] rounded-full flex items-center justify-center">
+                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="flex space-x-1">
+                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Input Area */}
         <div className="flex-shrink-0 border-t border-slate-200 bg-white p-6">
-          <ChatInput />
+          <ChatInput onSendMessage={handleSendMessage} disabled={isLoading} />
         </div>
       </div>
     </>
