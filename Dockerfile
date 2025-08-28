@@ -4,7 +4,7 @@ FROM node:20-alpine AS build
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
-COPY . .
+COPY . /
 RUN npm run build
 
 
@@ -12,5 +12,5 @@ RUN npm run build
 # Uses Nginx image to serve the files on port 80
 FROM nginx:1.27-alpine
 COPY --from=build /app/build /usr/share/nginx/html
-COPY web/frontend/nginx.conf /etc/nginx/conf.d/web.conf
+COPY FRONTEND/nginx.conf /etc/nginx/conf.d/web.conf
 EXPOSE 80
