@@ -53,16 +53,21 @@ jobs:
 
       - name: Deploy via SSM (by tag Role=frontend)
         run: |
-          set -eux
-          FRONT_IMAGE="${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:latest"
+          set -euxo pipefail
+          IMAGE="${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${{ env.IMAGE_TAG }}"
           aws ssm send-command \
             --document-name "AWS-RunShellScript" \
             --targets "Key=tag:Role,Values=frontend" \
             --parameters 'commands=[
-              "set -eux",
-              "cd /opt/frontend",
-              "FRONT_IMAGE='"$FRONT_IMAGE"' docker compose pull",
-              "FRONT_IMAGE='"$FRONT_IMAGE"' docker compose up -d"
+              "set -euxo pipefail",
+              "aws ecr get-login-password --region '${{ env.AWS_REGION }}' | docker login --username AWS --password-stdin '${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com'",
+              "docker pull '"$IMAGE"'",
+              "CID=$(docker create '"$IMAGE"')",
+              "rm -rf /var/www/frontend/*",
+              "docker cp $CID:/usr/share/nginx/html/. /var/www/frontend/",
+              "docker rm $CID",
+              "chown -R www-data:www-data /var/www/frontend || true",
+              "nginx -t && systemctl reload nginx || (systemctl restart nginx && nginx -t && systemctl reload nginx)"
             ]' \
-            --comment "Deploy frontend ${{ env.IMAGE_TAG }}" \
+            --comment "Deploy static files from $IMAGE to /var/www/frontend" \
             --region ${{ env.AWS_REGION }}
