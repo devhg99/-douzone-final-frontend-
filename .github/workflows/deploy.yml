@@ -122,3 +122,8 @@ jobs:
               sleep 5
             done
           done
+      - name: Create env file
+        run: |
+          cat > .env.production << 'EOF'
+          REACT_APP_API_BASE_URL=/v1
+          EOF
