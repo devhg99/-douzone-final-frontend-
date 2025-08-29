@@ -9,7 +9,7 @@ env:
   AWS_REGION: ap-northeast-2
   AWS_ACCOUNT_ID: 373317459179
   ECR_REPO: web/frontend
-  IMAGE_TAG: latest
+  IMAGE_TAG: ${{ github.sha }}
 
 permissions:
   id-token: write
@@ -64,5 +64,5 @@ jobs:
               "FRONT_IMAGE='"$FRONT_IMAGE"' docker compose pull",
               "FRONT_IMAGE='"$FRONT_IMAGE"' docker compose up -d"
             ]' \
-            --comment "Deploy frontend" \
+            --comment "Deploy frontend ${{ env.IMAGE_TAG }}" \
             --region ${{ env.AWS_REGION }}
