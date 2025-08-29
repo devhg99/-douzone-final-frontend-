@@ -1,6 +1,9 @@
 import React from 'react';
+import useUIStore from '../../store/useUIStore';
 
 const ChatMessage = ({ message, isUser = false, onSendMessage }) => {
+  const { triggerEventRefresh } = useUIStore();
+
   // URL을 감지하고 링크 버튼으로 변환하는 함수
   const formatMessage = (text) => {
     // URL 패턴 감지 (http/https로 시작하는 링크)
@@ -61,18 +64,19 @@ const ChatMessage = ({ message, isUser = false, onSendMessage }) => {
     // URL 처리
     const finalElements = elements.map((element, index) => {
       if (typeof element === 'string') {
+        // URL을 링크로 변환
         const parts = element.split(urlRegex);
         return parts.map((part, partIndex) => {
           if (urlRegex.test(part)) {
             return (
               <a
-                key={`url-${index}-${partIndex}`}
+                key={`${index}-${partIndex}`}
                 href={part}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-block mt-2 px-4 py-2 bg-gradient-to-r from-[#667EEA] to-[#764BA2] text-white text-sm rounded-lg hover:from-[#5A67D8] hover:to-[#6B46C1] transition-all duration-200 shadow-sm hover:shadow-md"
+                className="text-blue-600 hover:text-blue-800 underline break-all"
               >
-                PPT 자료 보기
+                {part}
               </a>
             );
           }
@@ -111,6 +115,11 @@ const ChatMessage = ({ message, isUser = false, onSendMessage }) => {
       if (message && onSendMessage) {
         // 사용자 메시지 없이 바로 AI 응답만 처리
         onSendMessage(message, true); // 두 번째 파라미터로 silent 모드 표시
+        
+        // 일정 추가 후 프론트엔드 업데이트 트리거
+        setTimeout(() => {
+          triggerEventRefresh();
+        }, 1000); // 1초 후 트리거 (AI 응답 완료 대기)
       }
     }
   };

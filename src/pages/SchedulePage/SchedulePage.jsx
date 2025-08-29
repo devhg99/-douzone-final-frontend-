@@ -3,6 +3,7 @@ import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import './SchedulePage.css';
 import { getMonthlyEvents, getWeeklyEvents, getEventColor } from '../../api/events';
+import useUIStore from '../../store/useUIStore';
 
 export default function SchedulePage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -10,6 +11,9 @@ export default function SchedulePage() {
   const [events, setEvents] = useState([]);
   const [weeklyEvents, setWeeklyEvents] = useState([]);
   const [loading, setLoading] = useState(false);
+  
+  // 전역 상태에서 일정 새로고침 트리거 감지
+  const { shouldRefreshEvents, resetEventRefresh } = useUIStore();
   
   // 일정 추가 폼 상태
   const [newEvent, setNewEvent] = useState({
@@ -19,6 +23,7 @@ export default function SchedulePage() {
   });
   const [addingEvent, setAddingEvent] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
+  const [popupEditingEvent, setPopupEditingEvent] = useState(null);
   const [popupDate, setPopupDate] = useState(null);
   const [popupEvents, setPopupEvents] = useState([]);
   const [showDetailPopup, setShowDetailPopup] = useState(false);
@@ -33,6 +38,34 @@ export default function SchedulePage() {
     { value: '예방교육', label: '예방교육', color: 'event-purple' },
     { value: '업무회의', label: '업무회의', color: 'event-indigo' }
   ];
+
+  // 이번 달 통계 계산 함수
+  const calculateMonthlyStats = () => {
+    const currentYear = currentMonth.getFullYear();
+    const currentMonthNum = currentMonth.getMonth() + 1;
+    
+    // 현재 월의 이벤트만 필터링
+    const monthlyEvents = events.filter(event => {
+      const eventDate = new Date(event.date);
+      return eventDate.getFullYear() === currentYear && eventDate.getMonth() + 1 === currentMonthNum;
+    });
+
+    // 전체 일정 수
+    const totalEvents = monthlyEvents.length;
+
+    // 타입별 통계
+    const stats = {
+      total: totalEvents,
+      '시험/평가': monthlyEvents.filter(e => e.event_type === '시험/평가').length,
+      '행사/활동': monthlyEvents.filter(e => e.event_type === '행사/활동').length,
+      '상담/회의': monthlyEvents.filter(e => e.event_type === '상담/회의').length,
+      '캠페인': monthlyEvents.filter(e => e.event_type === '캠페인').length,
+      '예방교육': monthlyEvents.filter(e => e.event_type === '예방교육').length,
+      '업무회의': monthlyEvents.filter(e => e.event_type === '업무회의').length,
+    };
+
+    return stats;
+  };
 
   const handleDateChange = (date) => {
     setSelectedDate(date);
@@ -99,6 +132,17 @@ export default function SchedulePage() {
     fetchWeeklyEvents(); // 이번주 이벤트도 함께 가져오기
   }, [currentMonth]);
 
+  // 챗봇에서 일정 변경 시 자동 새로고침
+  useEffect(() => {
+    if (shouldRefreshEvents) {
+      const year = currentMonth.getFullYear();
+      const month = currentMonth.getMonth() + 1;
+      fetchEvents(year, month);
+      fetchWeeklyEvents();
+      resetEventRefresh(); // 트리거 리셋
+    }
+  }, [shouldRefreshEvents, currentMonth, resetEventRefresh]);
+
   // 날짜별 이벤트 그룹화
   const getEventsForDate = (date) => {
     const dateStr = date.toLocaleDateString('sv-SE'); // YYYY-MM-DD 형식 (로컬 시간 기준)
@@ -115,7 +159,9 @@ export default function SchedulePage() {
     return (
       <div className="calendar-events">
         {dayEvents.map((event, index) => (
-          <div key={index} className={`event-dot ${getEventColor(event.event_type)}`}></div>
+          <div key={index} className={`event-line ${getEventColor(event.event_type)}`}>
+            <span className="event-name">{event.event_name}</span>
+          </div>
         ))}
       </div>
     );
@@ -169,7 +215,7 @@ export default function SchedulePage() {
     }
   };
 
-  // 일정 수정 핸들러
+  // 일정 수정 핸들러 (이번주 일정용)
   const handleEditEvent = async () => {
     if (!editingEvent.event_name.trim()) {
       alert('일정명을 입력해주세요.');
@@ -196,6 +242,47 @@ export default function SchedulePage() {
 
       // 수정 모드 종료
       setEditingEvent(null);
+
+      // 캘린더 새로고침
+      const year = currentMonth.getFullYear();
+      const month = currentMonth.getMonth() + 1;
+      await fetchEvents(year, month);
+      await fetchWeeklyEvents();
+
+      alert('일정이 성공적으로 수정되었습니다!');
+    } catch (error) {
+      console.error('일정 수정 오류:', error);
+      alert('일정 수정에 실패했습니다.');
+    }
+  };
+
+  // 팝업 일정 수정 핸들러
+  const handlePopupEditEvent = async () => {
+    if (!popupEditingEvent.event_name.trim()) {
+      alert('일정명을 입력해주세요.');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000/v1'}/events/${popupEditingEvent.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          event_name: popupEditingEvent.event_name,
+          event_type: popupEditingEvent.event_type,
+          date: popupEditingEvent.date,
+          description: null
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('일정 수정에 실패했습니다.');
+      }
+
+      // 팝업 수정 모드 종료
+      setPopupEditingEvent(null);
 
       // 캘린더 새로고침
       const year = currentMonth.getFullYear();
@@ -271,6 +358,54 @@ export default function SchedulePage() {
                 minDetail="month"
                 maxDetail="month"
               />
+            </div>
+
+            {/* 이번 달 통계 */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-6">이번 달 통계</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                {/* 전체일정 */}
+                <div className="bg-white rounded-lg p-4 border-2 border-gray-300 hover:shadow-md transition-shadow flex flex-col justify-center items-center text-center">
+                  <div className="text-2xl font-bold text-gray-600 mb-1">{calculateMonthlyStats().total}</div>
+                  <div className="text-xs text-gray-500">전체일정</div>
+                </div>
+
+                {/* 시험/평가 */}
+                <div className="bg-white rounded-lg p-4 border-2 border-gray-300 hover:shadow-md transition-shadow flex flex-col justify-center items-center text-center">
+                  <div className="text-2xl font-bold text-red-600 mb-1">{calculateMonthlyStats()['시험/평가']}</div>
+                  <div className="text-xs text-red-500">시험/평가</div>
+                </div>
+
+                {/* 행사/활동 */}
+                <div className="bg-white rounded-lg p-4 border-2 border-gray-300 hover:shadow-md transition-shadow flex flex-col justify-center items-center text-center">
+                  <div className="text-2xl font-bold text-green-600 mb-1">{calculateMonthlyStats()['행사/활동']}</div>
+                  <div className="text-xs text-green-500">행사/활동</div>
+                </div>
+
+                {/* 상담/회의 */}
+                <div className="bg-white rounded-lg p-4 border-2 border-gray-300 hover:shadow-md transition-shadow flex flex-col justify-center items-center text-center">
+                  <div className="text-2xl font-bold text-orange-600 mb-1">{calculateMonthlyStats()['상담/회의']}</div>
+                  <div className="text-xs text-orange-500">상담/회의</div>
+                </div>
+
+                {/* 캠페인 */}
+                <div className="bg-white rounded-lg p-4 border-2 border-gray-300 hover:shadow-md transition-shadow flex flex-col justify-center items-center text-center">
+                  <div className="text-2xl font-bold text-blue-600 mb-1">{calculateMonthlyStats()['캠페인']}</div>
+                  <div className="text-xs text-blue-500">캠페인</div>
+                </div>
+
+                {/* 예방교육 */}
+                <div className="bg-white rounded-lg p-4 border-2 border-gray-300 hover:shadow-md transition-shadow flex flex-col justify-center items-center text-center">
+                  <div className="text-2xl font-bold text-purple-600 mb-1">{calculateMonthlyStats()['예방교육']}</div>
+                  <div className="text-xs text-purple-500">예방교육</div>
+                </div>
+
+                {/* 업무회의 */}
+                <div className="bg-white rounded-lg p-4 border-2 border-gray-300 hover:shadow-md transition-shadow flex flex-col justify-center items-center text-center">
+                  <div className="text-2xl font-bold text-indigo-600 mb-1">{calculateMonthlyStats()['업무회의']}</div>
+                  <div className="text-xs text-indigo-500">업무회의</div>
+                </div>
+              </div>
             </div>
 
 
@@ -458,16 +593,23 @@ export default function SchedulePage() {
 
       {/* 일정 상세 팝업 */}
       {showDetailPopup && (
-        <div className="fixed inset-0 z-50">
-          <div 
-            className="bg-white rounded-lg p-6 max-w-md w-80 border-2 border-gray-200 shadow-lg absolute"
-            style={{ 
-              top: `${popupPosition.top}px`, 
-              left: `${popupPosition.left}px` 
-            }}
-          >
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">일정 상세</h3>
+        <div 
+          className="bg-white rounded-lg p-6 max-w-md w-80 border-2 border-gray-200 shadow-lg absolute z-50"
+          style={{ 
+            position: 'absolute',
+            top: `${popupPosition.top}px`, 
+            left: `${popupPosition.left}px`,
+            zIndex: 1000
+          }}
+        >
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">일정 상세</h3>
+            <div className="flex items-center gap-2">
+              {popupEvents.length > 2 && (
+                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                  {popupEvents.length}개 일정
+                </span>
+              )}
               <button 
                 onClick={() => setShowDetailPopup(false)}
                 className="text-gray-400 hover:text-gray-600 text-xl"
@@ -475,63 +617,96 @@ export default function SchedulePage() {
                 ✕
               </button>
             </div>
-            
-            {popupEvents.length > 0 ? (
-              <div className="space-y-4">
-                {popupEvents.map((event, index) => (
-                  <div key={index} className="border-b border-gray-200 pb-4 last:border-b-0">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className={`w-3 h-3 rounded-full ${getEventColor(event.event_type)}`}></div>
-                      <div className="font-medium text-lg text-gray-900">{event.event_name}</div>
-                    </div>
-                    <div className="text-sm text-gray-600 space-y-1 ml-5">
-                      <div>
-                        {popupDate.toLocaleDateString('ko-KR', { 
-                          year: 'numeric',
-                          month: 'long', 
-                          day: 'numeric',
-                          weekday: 'long'
-                        })}
-                      </div>
-                      <div>
-                        {event.event_type}
-                      </div>
-                      {event.description && (
-                        <div>
-                          {event.description}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex gap-2 mt-3 ml-5">
-                      <button
-                        onClick={() => {
-                          setEditingEvent(event);
-                          setShowDetailPopup(false);
-                        }}
-                        className="px-3 py-1 text-sm bg-[#2E86C1] text-white rounded hover:bg-[#2874A6] transition-colors"
-                      >
-                        수정
-                      </button>
-                      <button
-                        onClick={() => {
-                          handleDeleteEvent(event.id);
-                          setShowDetailPopup(false);
-                        }}
-                        className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-                      >
-                        삭제
-                      </button>
-
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                <div>선택한 날짜에 등록된 일정이 없습니다.</div>
-              </div>
-            )}
           </div>
+          
+          {popupEvents.length > 0 ? (
+            <div className="space-y-4 max-h-96 overflow-y-auto custom-scrollbar">
+              {popupEvents.map((event, index) => (
+                <div key={index} className="border-b border-gray-200 pb-4 last:border-b-0">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className={`w-3 h-3 rounded-full ${getEventColor(event.event_type)}`}></div>
+                    <div className="font-medium text-lg text-gray-900">{event.event_name}</div>
+                  </div>
+                  <div className="text-sm text-gray-600 space-y-1 ml-5">
+                    <div>
+                      {popupDate.toLocaleDateString('ko-KR', { 
+                        year: 'numeric',
+                        month: 'long', 
+                        day: 'numeric',
+                        weekday: 'long'
+                      })}
+                    </div>
+                    <div>
+                      {event.event_type}
+                    </div>
+                    {event.description && (
+                      <div>
+                        {event.description}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex gap-2 mt-3 ml-5">
+                    {popupEditingEvent && popupEditingEvent.id === event.id ? (
+                      // 팝업 수정 모드
+                      <div className="space-y-2 w-full">
+                        <input
+                          type="text"
+                          value={popupEditingEvent.event_name}
+                          onChange={(e) => setPopupEditingEvent({...popupEditingEvent, event_name: e.target.value})}
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#2E86C1]"
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="date"
+                            value={popupEditingEvent.date}
+                            onChange={(e) => setPopupEditingEvent({...popupEditingEvent, date: e.target.value})}
+                            className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#2E86C1]"
+                          />
+                          <div className="flex gap-1">
+                            <button
+                              onClick={handlePopupEditEvent}
+                              className="px-2 py-1 text-xs bg-[#2E86C1] text-white rounded hover:bg-[#2874A6] transition-colors"
+                            >
+                              저장
+                            </button>
+                            <button
+                              onClick={() => setPopupEditingEvent(null)}
+                              className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
+                            >
+                              취소
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      // 일반 모드
+                      <>
+                        <button
+                          onClick={() => setPopupEditingEvent(event)}
+                          className="px-3 py-1 text-sm bg-[#2E86C1] text-white rounded hover:bg-[#2874A6] transition-colors"
+                        >
+                          수정
+                        </button>
+                        <button
+                          onClick={() => {
+                            handleDeleteEvent(event.id);
+                            setShowDetailPopup(false);
+                          }}
+                          className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                        >
+                          삭제
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <div>선택한 날짜에 등록된 일정이 없습니다.</div>
+            </div>
+          )}
         </div>
       )}
     </div>

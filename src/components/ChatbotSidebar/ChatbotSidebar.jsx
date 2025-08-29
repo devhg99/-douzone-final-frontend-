@@ -2,9 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
 import { sendChatMessage } from '../../api/chatbot';
+import useUIStore from '../../store/useUIStore';
 
 const ChatbotSidebar = ({ isOpen, onClose }) => {
   const messagesEndRef = useRef(null);
+  const { triggerEventRefresh } = useUIStore();
   
   const [messages, setMessages] = useState([
     {
@@ -55,6 +57,12 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
       };
       
       setMessages(prev => [...prev, aiMsg]);
+      
+      // 일정 관련 작업인지 확인하고 프론트엔드 업데이트 트리거
+      const isEventRelated = checkIfEventRelated(userMessage, response.response);
+      if (isEventRelated) {
+        triggerEventRefresh();
+      }
     } catch (error) {
       console.error('챗봇 응답 오류:', error);
       
@@ -70,6 +78,22 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // 일정 관련 작업인지 확인하는 함수
+  const checkIfEventRelated = (userMessage, aiResponse) => {
+    const eventKeywords = ['일정', '추가', '등록', '삭제', '수정', '변경', '체육대회', '시험', '행사', '회의'];
+    const successKeywords = ['성공', '추가되었습니다', '등록되었습니다', '삭제되었습니다', '수정되었습니다'];
+    
+    const hasEventKeyword = eventKeywords.some(keyword => 
+      userMessage.includes(keyword) || (aiResponse && aiResponse.includes(keyword))
+    );
+    
+    const hasSuccessKeyword = successKeywords.some(keyword => 
+      aiResponse && aiResponse.includes(keyword)
+    );
+    
+    return hasEventKeyword && hasSuccessKeyword;
   };
 
   return (
