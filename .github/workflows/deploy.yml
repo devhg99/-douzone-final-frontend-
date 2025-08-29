@@ -1,4 +1,4 @@
-name: Frontend CI/CD
+name: Frontend → ECR → EC2(Nginx copy)
 
 on:
   push:
@@ -10,7 +10,8 @@ on:
       - "package-lock.json"
       - "Dockerfile"
       - "nginx/**"
-      - ".github/workflows/deploy-frontend.yml"
+      - ".github/workflows/**"
+  workflow_dispatch: {}
 
 env:
   AWS_REGION: ap-northeast-2
@@ -28,7 +29,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configure AWS (OIDC)
+      - name: Configure AWS via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::373317459179:role/github-actions-ecr-pusher
@@ -44,35 +45,70 @@ jobs:
 
       - name: Build & Push (latest + SHA)
         run: |
+          set -eux
           FRONT_ECR=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}
+
           docker build \
             --build-arg REACT_APP_API_BASE_URL=${{ secrets.REACT_APP_API_BASE_URL }} \
             -t $FRONT_ECR:latest \
-            -t $FRONT_ECR:${{ github.sha }} \
+            -t $FRONT_ECR:${GITHUB_SHA} \
             .
-          docker push $FRONT_ECR:latest
-          docker push $FRONT_ECR:${{ github.sha }}
 
-      - name: Deploy via SSM (extract static files to host Nginx)
+          docker push $FRONT_ECR:latest
+          docker push $FRONT_ECR:${GITHUB_SHA}
+
+          echo "IMAGE=$FRONT_ECR:${GITHUB_SHA}" >> $GITHUB_ENV
+
+          # 푸시 확인용 다이제스트 출력
+          aws ecr describe-images \
+            --repository-name ${{ env.ECR_REPO }} \
+            --image-ids imageTag=${GITHUB_SHA} \
+            --region ${{ env.AWS_REGION }} \
+            --query 'imageDetails[0].imageDigest' --output text
+
+      - name: Deploy via SSM (copy static to host Nginx)
         run: |
-          IMAGE="${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${{ github.sha }}"
-          aws ssm send-command \
+          set -eux
+          CMD_ID=$(aws ssm send-command \
             --document-name "AWS-RunShellScript" \
             --targets "Key=tag:Role,Values=frontend" \
-            --parameters commands='[
-              "set -euxo pipefail",
-              "AWS_REGION='${{ env.AWS_REGION }}'",
-              "IMAGE='"$IMAGE"'" ,
-              "DST=/var/www/html",
-              "aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin '${{ env.AWS_ACCOUNT_ID }}'.dkr.ecr.'$AWS_REGION'.amazonaws.com",
-              "docker pull $IMAGE",
-              "CID=$(docker create $IMAGE)",
-              "rm -rf ${DST:?}/*",
-              "docker cp $CID:/usr/share/nginx/html/. $DST/",
-              "docker rm $CID",
-              "echo '${{ github.sha }}' > $DST/__version.txt",
-              "chown -R www-data:www-data $DST || true",
-              "nginx -t && systemctl reload nginx || (systemctl restart nginx && nginx -t && systemctl reload nginx)"
-            ]' \
-            --comment "Deploy FE static ${{ github.sha }}" \
-            --region ${{ env.AWS_REGION }}
+            --parameters commands="[
+              \"set -euxo pipefail\",
+              \"AWS_REGION='${{ env.AWS_REGION }}'\",
+              \"IMAGE='${IMAGE}'\",
+              \"DST=/var/www/html\",
+              \"aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com\",
+              \"docker pull $IMAGE\",
+              \"CID=$(docker create $IMAGE)\",
+              \"rm -rf \${DST:?}/*\",
+              \"docker cp $CID:/usr/share/nginx/html/. $DST/\",
+              \"docker rm $CID\",
+              \"echo '${GITHUB_SHA}' > $DST/__version.txt\",
+              \"nginx -t && systemctl reload nginx\"
+            ]" \
+            --region "${{ env.AWS_REGION }}" \
+            --query "Command.CommandId" --output text)
+
+          echo "SSM CommandId: ${CMD_ID}"
+
+          # 결과 폴링(실패 시 Actions도 실패로)
+          TARGETS=$(aws ec2 describe-instances \
+            --filters "Name=tag:Role,Values=frontend" "Name=instance-state-name,Values=running" \
+            --query "Reservations[].Instances[].InstanceId" --output text --region "${{ env.AWS_REGION }}")
+
+          for IID in ${TARGETS}; do
+            for i in {1..60}; do
+              STATUS=$(aws ssm get-command-invocation --region "${{ env.AWS_REGION }}" \
+                        --command-id "$CMD_ID" --instance-id "$IID" \
+                        --query "Status" --output text || echo "Pending")
+              if [ "$STATUS" = "Success" ]; then
+                echo "OK: $IID"; break
+              elif [[ "$STATUS" =~ (Failed|Cancelled|TimedOut) ]]; then
+                echo "ERROR: $IID status=$STATUS"
+                aws ssm get-command-invocation --region "${{ env.AWS_REGION }}" \
+                  --command-id "$CMD_ID" --instance-id "$IID" || true
+                exit 1
+              fi
+              sleep 5
+            done
+          done
