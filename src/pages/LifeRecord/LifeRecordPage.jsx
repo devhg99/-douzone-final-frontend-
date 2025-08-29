@@ -19,16 +19,9 @@ try {
 }
 /* eslint-enable no-undef */
 
-const API_BASE =
-  (VITE_ENV && VITE_ENV.VITE_API_BASE_URL) ||
-  process.env.REACT_APP_API_BASE_URL ||
-  "";
+const API_BASE = process.env.REACT_APP_API_BASE_URL;
 
-const API_TIMEOUT = Number(
-  (VITE_ENV && VITE_ENV.VITE_API_TIMEOUT) ||
-  process.env.REACT_APP_API_TIMEOUT ||
-  15000
-);
+const API_TIMEOUT = Number(process.env.REACT_APP_API_TIMEOUT) || 15000;
 
 // base와 path를 안전하게 합쳐서 //, /// 같은 중복 슬래시 제거
 function apiUrl(path) {

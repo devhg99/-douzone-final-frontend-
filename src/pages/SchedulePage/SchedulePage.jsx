@@ -176,7 +176,7 @@ export default function SchedulePage() {
 
     setAddingEvent(true);
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000/v1'}/events`, {
+      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/events`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -223,7 +223,7 @@ export default function SchedulePage() {
     }
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000/v1'}/events/${editingEvent.id}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/events/${editingEvent.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -264,7 +264,7 @@ export default function SchedulePage() {
     }
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000/v1'}/events/${popupEditingEvent.id}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/events/${popupEditingEvent.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -304,7 +304,7 @@ export default function SchedulePage() {
     }
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000/v1'}/events/${eventId}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/events/${eventId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

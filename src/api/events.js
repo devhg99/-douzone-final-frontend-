@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000/v1';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 /**
  * 전체 이벤트 조회
