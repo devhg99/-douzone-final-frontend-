@@ -103,7 +103,7 @@
 .custom-calendar .react-calendar__tile--now::before {
   content: '' !important;
   position: absolute !important;
-  top: 0.25rem !important;
+  top: 0.35rem !important;
   left: 0.32rem !important;
   width: 2rem !important;
   height: 2rem !important;

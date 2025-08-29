@@ -11,17 +11,25 @@ const ChatInput = ({ onSendMessage, disabled = false }) => {
     }
   };
 
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e);
+    }
+  };
+
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} className="w-full">
       <div className="relative">
         <input
           type="text"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
+          onKeyPress={handleKeyPress}
           placeholder={disabled ? "AI가 응답 중입니다..." : "메시지를 입력하세요..."}
           disabled={disabled}
-          className={`w-full px-4 py-3 pr-12 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#667EEA] focus:border-transparent bg-white shadow-sm ${
-            disabled ? 'opacity-50 cursor-not-allowed' : ''
+          className={`w-full px-4 py-3 pr-12 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#667EEA] focus:border-transparent bg-white shadow-sm transition-all duration-200 ${
+            disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-slate-400'
           }`}
         />
         <button
