@@ -16,14 +16,16 @@ const TeacherLoginPage = () => {
 
   const handleLogin = async () => {
     try {
-      console.log("⚠️ 백엔드 없이 테스트 로그인 실행");
+      const response = await axios.post(`${process.env.REACT_APP_API_BASE_URL}/auth/login`, {
+        id: formData.id,
+        password: formData.password,
+      });
 
-      // 👉 필요하면 여기에 로컬스토리지 토큰 저장도 가능
-      // localStorage.setItem('token', 'dummy-token');
+      console.log('✅ 로그인 성공:', response.data);
+      navigate('/dashboard');
 
-      navigate("/dashboard");
     } catch (error) {
-      console.error("❌ 로그인 실패:", error.message);
+      console.error('❌ 로그인 실패:', error.response?.data || error.message);
     }
   };
 
