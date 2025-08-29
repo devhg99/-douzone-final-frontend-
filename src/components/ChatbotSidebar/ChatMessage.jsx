@@ -61,23 +61,21 @@ const ChatMessage = ({ message, isUser = false, onSendMessage }) => {
       }
     }
     
-    // URL 처리
+    // URL을 PPT 자료 버튼으로 변환
     const finalElements = elements.map((element, index) => {
       if (typeof element === 'string') {
-        // URL을 링크로 변환
+        // URL을 PPT 자료 버튼으로 변환
         const parts = element.split(urlRegex);
         return parts.map((part, partIndex) => {
           if (urlRegex.test(part)) {
             return (
-              <a
+              <button
                 key={`${index}-${partIndex}`}
-                href={part}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:text-blue-800 underline break-all"
+                onClick={() => window.open(part, '_blank', 'noopener,noreferrer')}
+                className="inline-block mt-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm rounded-md hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-sm hover:shadow-md font-medium"
               >
-                {part}
-              </a>
+                📄 PPT 자료
+              </button>
             );
           }
           return part;
