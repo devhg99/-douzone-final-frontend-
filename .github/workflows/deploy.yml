@@ -51,7 +51,7 @@ jobs:
           role-to-assume: arn:aws:iam::373317459179:role/github-actions-ecr-pusher
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Deploy via SSM (by tag Role=frontend)
+      - name: Deploy via SSM (extract static files)
         run: |
           set -euxo pipefail
           IMAGE="${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${{ env.IMAGE_TAG }}"
@@ -59,15 +59,18 @@ jobs:
             --document-name "AWS-RunShellScript" \
             --targets "Key=tag:Role,Values=frontend" \
             --parameters 'commands=[
-              "set -euxo pipefail",
-              "aws ecr get-login-password --region '${{ env.AWS_REGION }}' | docker login --username AWS --password-stdin '${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com'",
-              "docker pull '"$IMAGE"'",
-              "CID=$(docker create '"$IMAGE"')",
-              "rm -rf /var/www/frontend/*",
-              "docker cp $CID:/usr/share/nginx/html/. /var/www/frontend/",
-              "docker rm $CID",
-              "chown -R www-data:www-data /var/www/frontend || true",
-              "nginx -t && systemctl reload nginx || (systemctl restart nginx && nginx -t && systemctl reload nginx)"
+              "set -euxo pipefail; \
+               AWS_REGION='${{ env.AWS_REGION }}'; \
+               IMAGE=''$IMAGE''; \
+               aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin '${{ env.AWS_ACCOUNT_ID }}'.dkr.ecr.'${{ env.AWS_REGION }}'.amazonaws.com; \
+               docker pull \"$IMAGE\"; \
+               CID=$(docker create \"$IMAGE\"); \
+               mkdir -p /var/www/frontend; \
+               rm -rf /var/www/frontend/*; \
+               docker cp \"$CID\":/usr/share/nginx/html/. /var/www/frontend/; \
+               docker rm \"$CID\"; \
+               chown -R www-data:www-data /var/www/frontend || true; \
+               nginx -t && systemctl reload nginx || (systemctl restart nginx && nginx -t && systemctl reload nginx)"
             ]' \
-            --comment "Deploy static files from $IMAGE to /var/www/frontend" \
+            --comment "Deploy FE static" \
             --region ${{ env.AWS_REGION }}
