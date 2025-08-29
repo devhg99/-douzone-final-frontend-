@@ -76,16 +76,16 @@ jobs:
 
           IMAGE="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${GITHUB_SHA}"
 
-          # 1) EC2에 보낼 명령(전부 원격에서 실행)
           CMD_ID=$(aws ssm send-command \
             --document-name "AWS-RunShellScript" \
             --targets "Key=tag:Role,Values=frontend" \
             --parameters 'commands=[
+              "#!/bin/bash",
               "set -euo pipefail",
-              "AWS_REGION=${{ env.AWS_REGION }}",
+              "AWS_REGION='${{ env.AWS_REGION }}'",
               "DST=/var/www/html",
-              "IMAGE=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${{ github.sha }}",
-              "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${AWS_REGION}.amazonaws.com",
+              "IMAGE='${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${{ github.sha }}'",
+              "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin '${{ env.AWS_ACCOUNT_ID }}'.dkr.ecr.${AWS_REGION}.amazonaws.com",
               "docker pull ${IMAGE}",
               "CID=$(docker create ${IMAGE})",
               "rm -rf ${DST:?}/*",
@@ -99,7 +99,7 @@ jobs:
 
           echo "SSM CommandId: ${CMD_ID}"
 
-          # 2) 실행 결과 폴링 (실패 시 CI도 실패)
+          # 결과 폴링(실패 시 CI도 실패)
           TARGETS=$(aws ec2 describe-instances \
             --filters "Name=tag:Role,Values=frontend" "Name=instance-state-name,Values=running" \
             --query "Reservations[].Instances[].InstanceId" --output text --region "${AWS_REGION}")
