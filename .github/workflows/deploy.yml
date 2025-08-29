@@ -67,9 +67,9 @@ jobs:
                CID=$(docker create \"$IMAGE\"); \
                mkdir -p /var/www/frontend; \
                rm -rf /var/www/frontend/*; \
-               docker cp \"$CID\":/usr/share/nginx/html/. /var/www/frontend/; \
+               docker cp \"$CID\":/usr/share/nginx/html/. /var/www/html/; \
                docker rm \"$CID\"; \
-               chown -R www-data:www-data /var/www/frontend || true; \
+               chown -R www-data:www-data /var/www/html || true; \
                nginx -t && systemctl reload nginx || (systemctl restart nginx && nginx -t && systemctl reload nginx)"
             ]' \
             --comment "Deploy FE static" \
