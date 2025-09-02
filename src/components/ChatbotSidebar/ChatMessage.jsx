@@ -9,7 +9,7 @@ const ChatMessage = ({ message, isUser = false, onSendMessage }) => {
     // URL 패턴 감지 (http/https로 시작하는 링크)
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     
-    if (!text) return '안녕하세요! 무엇을 도와드릴까요?';
+    if (!text) return '';
     
     // 대괄호 제거
     const cleanText = text.replace(/\[([^\]]*)\]/g, '$1');
