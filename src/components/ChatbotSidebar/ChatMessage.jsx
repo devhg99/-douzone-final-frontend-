@@ -16,6 +16,9 @@ const ChatMessage = ({ message, isUser = false, onSendMessage }) => {
     
     // 일정 관련 텍스트 감지 및 버튼 추가 (더 정확한 패턴)
     const scheduleRegex = /(\*\s*[^*\n]*?(?:수학여행|대청소|체육대회|운동회|시험|평가|행사)[^*\n]*?(?:일정|하는 날|예정|있어요|해요)[^*\n]*?)/g;
+    
+    // 미래 일정 감지 (공지사항에서)
+    const futureScheduleRegex = /(\d+월\s*\d+일[^:]*:(?:[^.]*?(?:예정되어\s*있습니다|있습니다)[^.]*?))/g;
     let lastIndex = 0;
     const elements = [];
     const processedSchedules = new Set(); // 중복 방지를 위한 Set
@@ -53,6 +56,38 @@ const ChatMessage = ({ message, isUser = false, onSendMessage }) => {
       lastIndex = match.index + match[0].length;
     }
     
+    // 미래 일정 찾기 (공지사항에서)
+    while ((match = futureScheduleRegex.exec(cleanText)) !== null) {
+      // 미래 일정 텍스트 이전 부분 추가
+      if (match.index > lastIndex) {
+        const beforeText = cleanText.slice(lastIndex, match.index);
+        if (beforeText) {
+          elements.push(beforeText);
+        }
+      }
+      
+      // 미래 일정 텍스트와 버튼 추가
+      const futureScheduleText = match[1];
+      
+      // 중복 체크
+      if (!processedSchedules.has(futureScheduleText)) {
+        processedSchedules.add(futureScheduleText);
+        elements.push(
+          <div key={`future-schedule-${match.index}`} className="mb-2">
+            <div className="text-sm">{futureScheduleText}</div>
+            <button
+              onClick={() => handleScheduleAdd(futureScheduleText)}
+              className="inline-block mt-1 px-3 py-1 bg-gradient-to-r from-green-500 to-green-600 text-white text-xs rounded-md hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-sm hover:shadow-md"
+            >
+              📅 일정 추가
+            </button>
+          </div>
+        );
+      }
+      
+      lastIndex = match.index + match[0].length;
+    }
+    
     // 남은 텍스트 추가
     if (lastIndex < cleanText.length) {
       const remainingText = cleanText.slice(lastIndex);
@@ -72,9 +107,9 @@ const ChatMessage = ({ message, isUser = false, onSendMessage }) => {
               <button
                 key={`${index}-${partIndex}`}
                 onClick={() => window.open(part, '_blank', 'noopener,noreferrer')}
-                className="inline-block mt-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm rounded-md hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-sm hover:shadow-md font-medium"
+                className="inline-block mt-2 px-4 py-2 bg-gradient-to-r from-[#667EEA] to-[#764BA2] text-white text-sm rounded-md hover:from-[#5A67D8] hover:to-[#6B46C1] transition-all duration-200 shadow-sm hover:shadow-md font-medium"
               >
-                📄 PPT 자료
+                PPT 자료
               </button>
             );
           }
@@ -91,7 +126,7 @@ const ChatMessage = ({ message, isUser = false, onSendMessage }) => {
   const handleScheduleAdd = (scheduleText) => {
     // 텍스트에서 날짜와 일정 제목 추출
     const dateMatch = scheduleText.match(/(\d+월\s*\d+일|\d+월\s*\d+일부터\s*\d+월\s*\d+일까지|오늘|내일|다가오는\s*\*\*[^*]+\*\*)/);
-    const eventMatch = scheduleText.match(/(수학여행|대청소|체육대회|운동회|시험|평가|행사)/);
+    const eventMatch = scheduleText.match(/(수학여행|대청소|체육대회|운동회|시험|평가|행사|취침|축구경기|축구|경기)/);
     
     if (dateMatch && eventMatch) {
       const date = dateMatch[1];
