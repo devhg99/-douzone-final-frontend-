@@ -56,6 +56,5 @@ jobs:
         aws ssm send-command \
           --document-name "AWS-RunShellScript" \
           --targets "Key=tag:Role,Values=frontend" \
-          --comment "Deploy frontend ${{ steps.tag.outputs.TAG }}" \
-          --parameters "{\"commands\":[\"bash -lc '/opt/frontend/deploy.sh ${{ steps.tag.outputs.TAG }}'\"]}" \
-          --region ${{ env.AWS_REGION }}
+          --parameters commands="DIGEST=${DIGEST} bash /opt/frontend/deploy.sh" \
+          --region ap-northeast-2
