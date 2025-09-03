@@ -53,8 +53,10 @@ jobs:
 
     - name: Deploy via SSM
       run: |
+        SHA_TAG=${{ github.sha }}
         aws ssm send-command \
           --document-name "AWS-RunShellScript" \
           --targets "Key=tag:Role,Values=frontend" \
-          --parameters commands="DIGEST=${DIGEST} bash /opt/frontend/deploy.sh" \
+          --parameters commands='["bash -lc \x27sudo /opt/frontend/deploy_frontend.sh '"$SHA_TAG"'\x27"]' \
+          --comment "Deploy frontend $SHA_TAG" \
           --region ap-northeast-2
