@@ -46,12 +46,16 @@ jobs:
         platforms: linux/amd64
         tags: ${{ steps.meta.outputs.tags }}
 
+    - name: Extract sha tag
+      id: tag
+      run: |
+        echo "TAG=$(echo '${{ steps.meta.outputs.tags }}' | tr ' ' '\n' | grep ':sha-' | head -n1 | awk -F: '{print $2}')" >> $GITHUB_OUTPUT
+
     - name: Deploy via SSM
       run: |
-        TAG=$(echo "${{ steps.meta.outputs.tags }}" | tr ' ' '\n' | grep 'sha-' | head -n1 | awk -F: '{print $2}')
         aws ssm send-command \
           --document-name "AWS-RunShellScript" \
           --targets "Key=tag:Role,Values=frontend" \
-          --comment "Deploy frontend ${TAG}" \
-          --parameters '{"commands":["bash -lc \"/opt/frontend/deploy.sh '"${TAG}"'\""]}' \
+          --comment "Deploy frontend ${{ steps.tag.outputs.TAG }}" \
+          --parameters "{\"commands\":[\"bash -lc '/opt/frontend/deploy.sh ${{ steps.tag.outputs.TAG }}'\"]}" \
           --region ${{ env.AWS_REGION }}

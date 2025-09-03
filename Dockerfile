@@ -1,16 +1,22 @@
-FROM node:18-alpine AS build
+# frontend/Dockerfile
+FROM node:18-alpine
+
+# 1) 기본 셋업
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
-# CRA류면 빌드타임 env는 REACT_APP_*만 반영됨. 필요 시 build 전에 echo해서 주입.
-COPY . .
-RUN npm run build
 
-FROM node:18-alpine
-WORKDIR /app
-# 정적 서버 설치
-RUN npm i -g serve
-COPY --from=build /app/build ./build
+# 2) 앱 소스 복사
+COPY . .
+
+# 3) CRA/webpack-dev-server가 프록시 뒤에서도 잘 뜨도록
+ENV HOST=0.0.0.0 \
+    NODE_ENV=development \
+    CI=false \
+    CHOKIDAR_USEPOLLING=true \
+    WDS_SOCKET_PORT=80 
+
 EXPOSE 3000
-# 0.0.0.0 바인드 + 3000
-CMD ["serve", "-s", "build", "-l", "3000"]
+
+# 4) 개발 서버 실행
+CMD ["npm", "start"]
