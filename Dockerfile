@@ -4,7 +4,7 @@ FROM node:18-alpine
 # 1) 기본 셋업
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+RUN npm ci || npm install
 
 # 2) 앱 소스 복사
 COPY . .
