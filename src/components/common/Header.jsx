@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import ChatbotSidebar from '../ChatbotSidebar';
 
 const Header = () => {
   const location = useLocation();
+  const [isChatbotOpen, setIsChatbotOpen] = useState(false);
 
   // 경로 → 타이틀 매핑
   const titleMap = {
@@ -58,6 +60,7 @@ const Header = () => {
           <div className="flex items-center gap-[13px] order-2 sm:order-none">
             {/* Chat Toggle Button */}
             <button
+              onClick={() => setIsChatbotOpen(true)}
               className="w-[72px] h-[72px] flex items-center justify-center hover:opacity-80 transition-opacity"
               aria-label="채팅 토글"
             >
@@ -132,6 +135,12 @@ const Header = () => {
           </div>
         </div>
       </div>
+      
+      {/* Chatbot Sidebar */}
+      <ChatbotSidebar 
+        isOpen={isChatbotOpen} 
+        onClose={() => setIsChatbotOpen(false)} 
+      />
     </header>
   );
 };
