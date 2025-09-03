@@ -46,7 +46,7 @@ const TeacherLoginPage = () => {
           <p className="text-sm text-gray-600 leading-relaxed">
             올바른 인성을 기르는
             <br />
-            소통의 교육 공간
+            소통의 교육 공간 입니다
           </p>
         </div>
       </div>
