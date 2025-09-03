@@ -6,6 +6,7 @@ import TeacherLoginPage from "./pages/TeacherLoginPage";
 import DashboardPage from "./pages/Dashboard/DashboardPage";
 import LifeRecordPage from "./pages/LifeRecord/LifeRecordPage"; // ✅ 추가
 import SchedulePage from "./pages/SchedulePage"; // ✅ 추가
+import ProblemWritingPage from "./pages/ProblemWritingPage/ProblemWritingPage"; // ✅ 추가
 
 function App() {
   return (
@@ -37,6 +38,9 @@ function App() {
 
           {/* 일정 관리 */}
           <Route path="/schedule" element={<SchedulePage />} />
+          
+          {/* 문제 출제 */}
+          <Route path="/problem-writing" element={<ProblemWritingPage />} />
         </Route>
       </Routes>
     </Router>
