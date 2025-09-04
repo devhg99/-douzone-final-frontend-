@@ -161,7 +161,7 @@ const ChatMessage = ({ message, isUser = false, onSendMessage }) => {
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div className={`max-w-sm px-4 py-3 rounded-2xl shadow-sm ${
         isUser 
-          ? 'bg-gradient-to-r from-[#667EEA] to-[#764BA2] text-white' 
+          ? 'bg-[#667EEA] text-white border border-[#667EEA]' 
           : 'bg-white text-slate-800 border border-slate-200'
       }`}>
         <div className="flex items-start gap-2">
