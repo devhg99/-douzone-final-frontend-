@@ -59,10 +59,17 @@ jobs:
 
     - name: Deploy via SSM
       run: |
-        SHA_TAG=${{ github.sha }}
+        # build & push 때 실제로 생성/푸시된 짧은 sha 태그(e.g., sha-24ffb25)
+        SHA_TAG="${{ steps.tag.outputs.TAG }}"
+        echo "Deploy TAG=${SHA_TAG}"
+
+        # 한 셸에서 ENV 설정 + 스크립트 실행(ENV 유실 방지)
         aws ssm send-command \
           --document-name "AWS-RunShellScript" \
           --targets "Key=tag:Role,Values=frontend" \
-          --parameters commands='["bash -lc \x27sudo /opt/frontend/deploy.sh '"$SHA_TAG"'\x27"]' \
-          --comment "Deploy frontend $SHA_TAG" \
-          --region ap-northeast-2
+          --parameters "commands=[
+            \"bash -lc 'export AWS_REGION=${{ env.AWS_REGION }} ACCOUNT_ID=${{ secrets.AWS_ACCOUNT_ID }} REPO=${{ env.ECR_REPO }} TAG=${SHA_TAG}; sudo -E /opt/frontend/deploy.sh ${SHA_TAG}'\"
+          ]" \
+          --comment "Deploy frontend ${SHA_TAG}" \
+          --region ${{ env.AWS_REGION }} \
+          --cloud-watch-output-config "CloudWatchLogGroupName=/aws/ssm/RunCommand,CloudWatchOutputEnabled=true"
