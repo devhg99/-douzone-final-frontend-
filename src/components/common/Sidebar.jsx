@@ -444,7 +444,7 @@ const Sidebar = () => {
           티봇초등학교
         </h1>
         <p className="text-white text-sm font-normal leading-normal text-center opacity-80">
-          6학년 2반
+          6학년 3반
         </p>
       </div>
 
