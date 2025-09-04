@@ -12,6 +12,8 @@ export default function ProblemWritingPage() {
   const [subjectiveCount, setSubjectiveCount] = useState(0);
   const [selectedQuestionTypes, setSelectedQuestionTypes] = useState([]);
   const [generatedTest, setGeneratedTest] = useState(null);
+  const [streamingContent, setStreamingContent] = useState('');
+  const [isStreaming, setIsStreaming] = useState(false);
 
                 // 과목 옵션
               const subjects = [
@@ -88,7 +90,7 @@ export default function ProblemWritingPage() {
                 { value: 'creative', label: '창의적 해결 문제' }
               ];
 
-  // 문제지 생성 함수
+  // 문제지 생성 함수 (스트리밍 방식)
   const generateTest = async () => {
     if (!selectedSubject || selectedUnits.length === 0 || !selectedDifficulty) {
       alert('과목, 단원, 난이도를 선택해주세요.');
@@ -101,8 +103,10 @@ export default function ProblemWritingPage() {
     }
 
     try {
-      // 로딩 상태 시작
-      setGeneratedTest({ loading: true, content: '문제지를 생성하고 있습니다...' });
+      // 스트리밍 상태 초기화
+      setIsStreaming(true);
+      setStreamingContent('');
+      setGeneratedTest({ loading: true, content: '' });
 
       // API 호출을 위한 설정 객체 생성
       const settings = {
@@ -115,24 +119,47 @@ export default function ProblemWritingPage() {
         question_types: selectedQuestionTypes
       };
 
-      // API 호출
-      const response = await generateProblemSet(settings);
-      
-      if (response.success) {
-        setGeneratedTest({
-          loading: false,
-          content: response.data.problem_content,
-          settings: response.data.settings_used
+      // 스트리밍 콜백 함수들
+      const onChunk = (chunk) => {
+        // 디버깅: 받은 청크 확인
+        console.log('🔍 UI에서 받은 청크:', JSON.stringify(chunk));
+        console.log('🔍 청크 타입:', typeof chunk);
+        console.log('🔍 청크 길이:', chunk.length);
+        
+        setStreamingContent(prev => {
+          const newContent = prev + chunk;
+          console.log('🔍 새로운 콘텐츠:', JSON.stringify(newContent));
+          return newContent;
         });
-      } else {
+      };
+
+      const onComplete = (data) => {
+        setIsStreaming(false);
+        // 스트리밍 완료 시에도 같은 영역에서 자연스럽게 완성된 상태로 유지
         setGeneratedTest({
           loading: false,
-          content: '문제지 생성에 실패했습니다. 다시 시도해주세요.',
+          content: streamingContent,
+          settings: settings
+        });
+        console.log('스트리밍 완료:', data);
+      };
+
+      const onError = (error) => {
+        setIsStreaming(false);
+        setGeneratedTest({
+          loading: false,
+          content: '문제지 생성 중 오류가 발생했습니다. 다시 시도해주세요.',
           error: true
         });
-      }
+        console.error('스트리밍 오류:', error);
+      };
+
+      // 스트리밍 API 호출
+      await generateProblemSet(settings, onChunk, onComplete, onError);
+      
     } catch (error) {
       console.error('문제지 생성 오류:', error);
+      setIsStreaming(false);
       setGeneratedTest({
         loading: false,
         content: '문제지 생성 중 오류가 발생했습니다. 다시 시도해주세요.',
@@ -282,7 +309,7 @@ export default function ProblemWritingPage() {
                       {selectedUnits.map((unit, index) => (
                         <div
                           key={unit.value}
-                          className="flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-2 rounded-md border border-blue-200"
+                          className="flex items-center gap-2 bg-gray-100 text-gray-700 px-3 py-2 rounded-md border border-gray-200"
                         >
                           <span className="text-sm font-medium">{unit.label}</span>
                           <button
@@ -290,7 +317,7 @@ export default function ProblemWritingPage() {
                               setSelectedUnits(selectedUnits.filter((_, i) => i !== index));
                               setSelectedSubUnits([]);
                             }}
-                            className="w-5 h-5 rounded-full bg-blue-200 hover:bg-blue-300 flex items-center justify-center text-blue-600 hover:text-blue-700 transition-colors"
+                            className="w-5 h-5 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-600 hover:text-gray-700 transition-colors"
                           >
                             <span className="text-xs font-bold">×</span>
                           </button>
@@ -333,12 +360,12 @@ export default function ProblemWritingPage() {
                       {selectedSubUnits.map((subUnit, index) => (
                         <div
                           key={subUnit.value}
-                          className="flex items-center gap-2 bg-green-50 text-green-700 px-3 py-2 rounded-md border border-green-200"
+                          className="flex items-center gap-2 bg-gray-50 text-gray-600 px-3 py-2 rounded-md border border-gray-100"
                         >
                           <span className="text-sm font-medium">{subUnit.label}</span>
                           <button
                             onClick={() => setSelectedSubUnits(selectedSubUnits.filter((_, i) => i !== index))}
-                            className="w-5 h-5 rounded-full bg-green-200 hover:bg-green-300 flex items-center justify-center text-green-600 hover:text-green-700 transition-colors"
+                            className="w-5 h-5 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-600 transition-colors"
                           >
                             <span className="text-xs font-bold">×</span>
                           </button>
@@ -470,15 +497,36 @@ export default function ProblemWritingPage() {
         <div className="lg:col-span-7">
           {generatedTest ? (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sticky top-6">
-              <div className="mb-6">
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">생성된 문제지</h3>
-              </div>
               
-              {/* 로딩 상태 */}
-              {generatedTest.loading && (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#2E86C1] mx-auto mb-4"></div>
-                  <p className="text-gray-600">{generatedTest.content}</p>
+              {/* 실시간 스트리밍 콘텐츠 표시 */}
+              {(isStreaming || (generatedTest && generatedTest.content)) && (
+                <div className="mb-6">
+                  <div className="text-left">
+                    {/* 상태 표시 */}
+                    <div className="mb-3">
+                                              <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
+                          isStreaming 
+                            ? 'bg-gray-100 text-gray-800 border border-gray-200' 
+                            : 'bg-gray-50 text-gray-500 border border-gray-100'
+                        }`}>
+                          <div className={`w-2.5 h-2.5 rounded-full ${
+                            isStreaming 
+                              ? 'bg-gray-800 animate-pulse' 
+                              : 'bg-gray-300'
+                          }`}></div>
+                        <span>
+                          {isStreaming ? '생성중...' : '완료'}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm min-h-[200px] max-h-[400px] overflow-y-auto">
+                      <div className="prose max-w-none text-gray-800 whitespace-pre-wrap">
+                        {streamingContent || generatedTest?.content}
+                        {isStreaming && <span className="animate-pulse text-[#2E86C1]">|</span>}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
               
@@ -496,30 +544,6 @@ export default function ProblemWritingPage() {
                 </div>
               )}
               
-                                {/* 성공적으로 생성된 문제지 */}
-                  {!generatedTest.loading && !generatedTest.error && (
-                    <>
-
-                  {/* 생성된 문제지 내용 */}
-                  <div className="mb-6">
-                    <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-                      <div className="prose max-w-none text-gray-800">
-                        {formatProblemContent(generatedTest.content)}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 문제지 액션 버튼 */}
-                  <div className="space-y-3">
-                    <button className="w-full bg-[#2E86C1] hover:bg-[#2874A6] text-white py-3 px-4 rounded-md transition-colors font-semibold shadow-sm hover:shadow-md">
-                      PDF 다운로드
-                    </button>
-                    <button className="w-full bg-gray-600 hover:bg-gray-700 text-white py-3 px-4 rounded-md transition-colors font-semibold shadow-sm hover:shadow-md">
-                      문제 편집
-                    </button>
-                  </div>
-                </>
-              )}
             </div>
           ) : (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sticky top-6">
