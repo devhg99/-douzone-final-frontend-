@@ -57,6 +57,6 @@ jobs:
         aws ssm send-command \
           --document-name "AWS-RunShellScript" \
           --targets "Key=tag:Role,Values=frontend" \
-          --parameters commands='["bash -lc \x27sudo /opt/frontend/deploy_frontend.sh '"$SHA_TAG"'\x27"]' \
+          --parameters commands='["bash -lc \x27sudo /opt/frontend/deploy.sh '"$SHA_TAG"'\x27"]' \
           --comment "Deploy frontend $SHA_TAG" \
           --region ap-northeast-2
