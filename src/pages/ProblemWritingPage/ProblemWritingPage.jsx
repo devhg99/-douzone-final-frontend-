@@ -520,7 +520,7 @@ export default function ProblemWritingPage() {
                       </div>
                     </div>
                     
-                    <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm min-h-[200px] max-h-[400px] overflow-y-auto">
+                    <div className="bg-white p-8 rounded-lg border border-gray-200 shadow-sm min-h-[400px] max-h-[800px] overflow-y-auto">
                       <div className="prose max-w-none text-gray-800 whitespace-pre-wrap">
                         {streamingContent || generatedTest?.content}
                         {isStreaming && <span className="animate-pulse text-[#2E86C1]">|</span>}
