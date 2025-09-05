@@ -168,67 +168,6 @@ export default function ProblemWritingPage() {
     }
   };
 
-  // 문제지 내용 포맷팅 함수 - 단순화
-  const formatProblemContent = (content) => {
-    if (!content) return '';
-    
-    // 줄바꿈으로 분리하여 각 줄을 div로 표시
-    const lines = content.split('\n');
-    const formattedLines = [];
-    
-    // 과목 제목 추가 (가장 첫 번째에)
-    const subjectTitle = selectedSubject === 'math' ? '수학' : 
-                        selectedSubject === 'korean' ? '국어' :
-                        selectedSubject === 'english' ? '영어' :
-                        selectedSubject === 'social' ? '사회' :
-                        selectedSubject === 'science' ? '과학' : '문제지';
-    
-    formattedLines.push(
-      <div key="subject-title" className="mb-8 text-center">
-        <h1 className="text-3xl font-bold text-gray-800">{subjectTitle}</h1>
-      </div>
-    );
-    
-    lines.forEach((line, index) => {
-      const trimmedLine = line.trim();
-      
-      if (trimmedLine.startsWith('[') && trimmedLine.endsWith(']')) {
-        // 섹션 제목 (예: [객관식 문제], [주관식 문제])
-        formattedLines.push(
-          <div key={index} className="mb-6">
-            <h3 className="text-xl font-bold text-[#2E86C1] mb-4 pb-2 border-b-2 border-[#2E86C1]">
-              {trimmedLine.replace(/[[\]]/g, '')}
-            </h3>
-          </div>
-        );
-      } else if (trimmedLine.startsWith('답:')) {
-        // 답안 표시 - "답:" 문구를 네모박스 안으로 이동
-        formattedLines.push(
-          <div key={index} className="mt-4">
-            {/* 풀이과정과 답을 적는 통합 칸 */}
-            <div className="border-2 border-gray-300 rounded-lg p-4 bg-white">
-              <div className="min-h-[120px]">
-                <div className="font-semibold text-gray-800 mb-2">답:</div>
-                {/* 풀이과정과 답을 적는 공간 */}
-              </div>
-            </div>
-          </div>
-        );
-      } else if (trimmedLine && !trimmedLine.startsWith('#')) {
-        // 일반 텍스트 (빈 줄이 아닌 경우)
-        formattedLines.push(
-          <div key={index} className="mb-2 text-gray-700 leading-relaxed">
-            {trimmedLine}
-          </div>
-        );
-      } else if (trimmedLine === '') {
-        // 빈 줄
-        formattedLines.push(<div key={index} className="mb-2"></div>);
-      }
-    });
-    
-    return formattedLines;
-  };
 
   // 문제 유형 토글 함수
   const toggleQuestionType = (type) => {
@@ -241,46 +180,45 @@ export default function ProblemWritingPage() {
 
   return (
     <div className="px-6 pb-6 bg-gray-50 min-h-screen">
-      {/* 헤더 */}
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold text-gray-900">문제 생성</h1>
-      </div>
 
       {/* 메인 콘텐츠 */}
-      <div className="grid grid-cols-1 lg:grid-cols-10 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* 왼쪽: 통합된 설정 영역 */}
         <div className="lg:col-span-3">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">문제 출제 설정</h2>
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg border border-gray-100 p-6">
+            <div className="mb-8">
+              <h2 className="text-xl font-bold text-gray-800 mb-2">문제 출제 설정</h2>
+              <p className="text-sm text-gray-600">과목, 단원, 난이도를 선택하여 맞춤형 문제지를 생성하세요</p>
             </div>
 
-                        <div className="space-y-4">
+            <div className="space-y-6">
               {/* 과목 선택 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                   과목 선택
                 </label>
-                                  <select
-                    value={selectedSubject}
-                    onChange={(e) => {
-                      setSelectedSubject(e.target.value);
-                      setSelectedUnits([]);
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#2E86C1] focus:border-transparent transition-colors"
-                  >
-                    {subjects.map((subject) => (
-                      <option key={subject.value} value={subject.value}>
-                        {subject.label}
-                      </option>
-                    ))}
-                  </select>
+                <select
+                  value={selectedSubject}
+                  onChange={(e) => {
+                    setSelectedSubject(e.target.value);
+                    setSelectedUnits([]);
+                  }}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white hover:bg-gray-50"
+                >
+                  {subjects.map((subject) => (
+                    <option key={subject.value} value={subject.value}>
+                      {subject.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* 단원 선택 */}
               {selectedSubject && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                     단원 선택
                   </label>
                   <select
@@ -291,7 +229,7 @@ export default function ProblemWritingPage() {
                         setSelectedUnits([...selectedUnits, selectedUnit]);
                       }
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#2E86C1] focus:border-transparent transition-colors"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 bg-white hover:bg-gray-50"
                   >
                     <option value="" style={{display: 'none'}}>단원을 선택하세요</option>
                     {getUnits(selectedSubject)
@@ -305,21 +243,23 @@ export default function ProblemWritingPage() {
                   
                   {/* 선택된 단원 태그들 */}
                   {selectedUnits.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-2">
+                    <div className="mt-4 flex flex-wrap gap-2">
                       {selectedUnits.map((unit, index) => (
                         <div
                           key={unit.value}
-                          className="flex items-center gap-2 bg-gray-100 text-gray-700 px-3 py-2 rounded-md border border-gray-200"
+                          className="inline-flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 rounded-lg text-sm border border-green-200 shadow-sm"
                         >
-                          <span className="text-sm font-medium">{unit.label}</span>
+                          <span className="font-medium">{unit.label}</span>
                           <button
                             onClick={() => {
                               setSelectedUnits(selectedUnits.filter((_, i) => i !== index));
                               setSelectedSubUnits([]);
                             }}
-                            className="w-5 h-5 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-gray-600 hover:text-gray-700 transition-colors"
+                            className="text-green-500 hover:text-green-700 transition-colors"
                           >
-                            <span className="text-xs font-bold">×</span>
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
                           </button>
                         </div>
                       ))}
@@ -331,7 +271,8 @@ export default function ProblemWritingPage() {
               {/* 소단원 선택 (수학 1단원만) */}
               {selectedSubject === 'math' && selectedUnits.some(unit => unit.value === 'unit1') && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                    <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
                     소단원 선택
                   </label>
                   <select
@@ -342,7 +283,7 @@ export default function ProblemWritingPage() {
                         setSelectedSubUnits([...selectedSubUnits, selectedSubUnit]);
                       }
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#2E86C1] focus:border-transparent transition-colors"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-white hover:bg-gray-50"
                   >
                     <option value="" style={{display: 'none'}}>소단원을 선택하세요</option>
                     {getSubUnits('math', 'unit1')
@@ -356,18 +297,20 @@ export default function ProblemWritingPage() {
                   
                   {/* 선택된 소단원 태그들 */}
                   {selectedSubUnits.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-2">
+                    <div className="mt-4 flex flex-wrap gap-2">
                       {selectedSubUnits.map((subUnit, index) => (
                         <div
                           key={subUnit.value}
-                          className="flex items-center gap-2 bg-gray-50 text-gray-600 px-3 py-2 rounded-md border border-gray-100"
+                          className="inline-flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-50 to-violet-50 text-purple-700 rounded-lg text-sm border border-purple-200 shadow-sm"
                         >
-                          <span className="text-sm font-medium">{subUnit.label}</span>
+                          <span className="font-medium">{subUnit.label}</span>
                           <button
                             onClick={() => setSelectedSubUnits(selectedSubUnits.filter((_, i) => i !== index))}
-                            className="w-5 h-5 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-600 transition-colors"
+                            className="text-purple-500 hover:text-purple-700 transition-colors"
                           >
-                            <span className="text-xs font-bold">×</span>
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
                           </button>
                         </div>
                       ))}
@@ -378,22 +321,23 @@ export default function ProblemWritingPage() {
 
               {/* 난이도 선택 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-amber-400 rounded-full"></div>
                   난이도 설정
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-3">
                   {difficulties.map((difficulty) => (
                     <button
                       key={difficulty.value}
                       onClick={() => setSelectedDifficulty(difficulty.value)}
-                      className={`p-3 rounded-md border transition-all duration-200 text-center ${
+                      className={`p-4 rounded-lg border-2 transition-all duration-200 text-center font-semibold ${
                         selectedDifficulty === difficulty.value
-                          ? 'border-[#2E86C1] bg-[#2E86C1] text-white shadow-md'
-                          : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+                          ? 'border-amber-400 bg-white text-amber-600 shadow-lg transform scale-105'
+                          : 'border-gray-200 hover:border-amber-300 hover:bg-amber-50 hover:shadow-md'
                       }`}
                     >
-                      <span className={`text-sm font-semibold ${
-                        selectedDifficulty === difficulty.value ? 'text-white' : difficulty.color
+                      <span className={`text-sm ${
+                        selectedDifficulty === difficulty.value ? 'text-amber-600' : difficulty.color
                       }`}>
                         {difficulty.label}
                       </span>
@@ -404,13 +348,15 @@ export default function ProblemWritingPage() {
 
               {/* 문제 수 선택 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
                   문제 구성
                 </label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-4">
                   {/* 객관식 */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
                       객관식 문제
                     </label>
                     <input
@@ -428,14 +374,15 @@ export default function ProblemWritingPage() {
                           }
                         }
                       }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#2E86C1] focus:border-transparent transition-colors"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white hover:bg-gray-50"
                       placeholder="0"
                     />
                   </div>
-
+                  
                   {/* 주관식 */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
                       주관식 문제
                     </label>
                     <input
@@ -453,7 +400,7 @@ export default function ProblemWritingPage() {
                           }
                         }
                       }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#2E86C1] focus:border-transparent transition-colors"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 bg-white hover:bg-gray-50"
                       placeholder="0"
                     />
                   </div>
@@ -462,18 +409,19 @@ export default function ProblemWritingPage() {
 
               {/* 문제 유형 선택 */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
                   문제 유형
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-3">
                   {questionTypes.map((type) => (
                     <button
                       key={type.value}
                       onClick={() => toggleQuestionType(type.value)}
-                      className={`p-3 rounded-md border transition-all duration-200 text-left text-sm ${
+                      className={`p-4 rounded-lg border-2 transition-all duration-200 text-left text-sm font-medium ${
                         selectedQuestionTypes.includes(type.value)
-                          ? 'border-[#2E86C1] bg-[#2E86C1] text-white shadow-md'
-                          : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+                          ? 'border-teal-500 bg-white text-teal-600 shadow-lg transform scale-105'
+                          : 'border-gray-200 hover:border-teal-300 hover:bg-teal-50 hover:shadow-md'
                       }`}
                     >
                       {type.label}
@@ -486,44 +434,49 @@ export default function ProblemWritingPage() {
             {/* 문제지 생성 버튼 */}
             <button
               onClick={generateTest}
-              className="w-full bg-[#2E86C1] text-white py-3 px-4 rounded-md hover:bg-[#2874A6] focus:outline-none focus:ring-2 focus:ring-[#2E86C1] focus:ring-offset-2 transition-colors font-semibold mt-6"
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 px-6 rounded-xl hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-105 mt-8"
             >
-              문제지 생성하기
+              <div className="flex items-center justify-center gap-3">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                문제지 생성하기
+              </div>
             </button>
           </div>
         </div>
 
                 {/* 오른쪽: 문제지 미리보기 */}
-        <div className="lg:col-span-7">
+        <div className="lg:col-span-9">
           {generatedTest ? (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sticky top-6">
+            <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg border border-gray-100 p-6 sticky top-6">
               
               {/* 실시간 스트리밍 콘텐츠 표시 */}
               {(isStreaming || (generatedTest && generatedTest.content)) && (
                 <div className="mb-6">
                   <div className="text-left">
                     {/* 상태 표시 */}
-                    <div className="mb-3">
-                                              <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
+                    <div className="mb-4">
+                      <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                        isStreaming 
+                          ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 border border-blue-200' 
+                          : 'bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 border border-green-200'
+                      }`}>
+                        <div className={`w-3 h-3 rounded-full ${
                           isStreaming 
-                            ? 'bg-gray-100 text-gray-800 border border-gray-200' 
-                            : 'bg-gray-50 text-gray-500 border border-gray-100'
-                        }`}>
-                          <div className={`w-2.5 h-2.5 rounded-full ${
-                            isStreaming 
-                              ? 'bg-gray-800 animate-pulse' 
-                              : 'bg-gray-300'
-                          }`}></div>
+                            ? 'bg-blue-500 animate-pulse' 
+                            : 'bg-green-500'
+                        }`}></div>
                         <span>
                           {isStreaming ? '생성중...' : '완료'}
                         </span>
                       </div>
                     </div>
                     
-                    <div className="bg-white p-8 rounded-lg border border-gray-200 shadow-sm min-h-[400px] max-h-[800px] overflow-y-auto">
+                    <div className="bg-white p-8 rounded-xl border border-gray-100 shadow-sm min-h-[400px] max-h-[800px] overflow-y-auto">
                       <div className="prose max-w-none text-gray-800 whitespace-pre-wrap">
                         {streamingContent || generatedTest?.content}
-                        {isStreaming && <span className="animate-pulse text-[#2E86C1]">|</span>}
+                        {isStreaming && <span className="animate-pulse text-blue-500">|</span>}
                       </div>
                     </div>
                   </div>
@@ -546,16 +499,19 @@ export default function ProblemWritingPage() {
               
             </div>
           ) : (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sticky top-6">
-              <div className="text-center py-8">
-                <div className="w-16 h-16 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-3xl">📝</span>
+            <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg border border-gray-100 p-6 sticky top-6">
+              
+              <div className="text-center py-12">
+                <div className="w-20 h-20 bg-gradient-to-r from-emerald-100 to-teal-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                  <svg className="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">문제지 미리보기</h3>
+                <h3 className="text-lg font-bold text-gray-800 mb-3">문제지 생성 준비</h3>
                 <p className="text-sm text-gray-600 leading-relaxed">
                   왼쪽에서 설정을 완료하고<br />
-                  <span className="font-semibold text-[#2E86C1]">문제지 생성하기</span> 버튼을 클릭하면<br />
-                  여기에 미리보기가 표시됩니다.
+                  <span className="font-semibold text-emerald-600">문제지 생성하기</span> 버튼을 클릭하면<br />
+                  여기에 문제지가 생성됩니다.
                 </p>
               </div>
             </div>
