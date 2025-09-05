@@ -136,10 +136,13 @@ export default function ProblemWritingPage() {
       const onComplete = (data) => {
         setIsStreaming(false);
         // 스트리밍 완료 시에도 같은 영역에서 자연스럽게 완성된 상태로 유지
-        setGeneratedTest({
-          loading: false,
-          content: streamingContent,
-          settings: settings
+        setGeneratedTest(prev => {
+          const finalContent = streamingContent || prev.content || '';
+          return {
+            loading: false,
+            content: finalContent,
+            settings: settings
+          };
         });
         console.log('스트리밍 완료:', data);
       };
