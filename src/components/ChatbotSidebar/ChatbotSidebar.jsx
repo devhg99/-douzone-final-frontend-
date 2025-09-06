@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
 import { sendChatMessage } from '../../api/chatbot';
@@ -8,30 +8,33 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
   const messagesEndRef = useRef(null);
   const { triggerEventRefresh } = useUIStore();
   
-  const [messages, setMessages] = useState([
-    {
+  // 슬라이드 탭 상태 관리
+  const [sidebarWidth, setSidebarWidth] = useState(700);
+  const [isResizing, setIsResizing] = useState(false);
+  const sidebarRef = useRef(null);
+  
+  // 각 탭별로 메시지를 별도 관리
+  const [tabMessages, setTabMessages] = useState({
+    overview: [{
       id: 1,
-      message: "안녕하세요! AI 업무 도우미입니다. 현재 제공하는 주요 기능들을 소개해드리겠습니다:\n\n문제지 생성: 과목별 맞춤형 문제지 자동 생성\n출결 관리: 출석 현황 정리, 결석자 추출, 통계 생성\n상담일지: 학생/학부모 상담 기록 및 관리\n성적 관리: 성적 입력, 분석, 리포트 생성\n일정 관리: 학교 행사, 시험 일정 등 관리\n\n어떤 업무를 도와드릴까요?",
+      message: "안녕하세요! AI 업무 도우미입니다. 현재 제공하는 주요 기능들을 소개해드리겠습니다:\n\n출결 관리: 출석 현황 정리, 결석자 추출, 통계 생성\n성적 관리: 성적 입력, 분석, 리포트 생성\n일정 관리: 학교 행사, 시험 일정 등 관리\n공지사항 관리: 공지사항 조회\n\n어떤 업무를 도와드릴까요?",
       isUser: false,
       timestamp: new Date()
-    }
-  ]);
+    }],
+    consultation: [{
+      id: 1,
+      message: "상담 업무를 도와드리겠습니다! 학생 상담, 학부모 상담, 상담일지 작성 등 무엇이든 도와드릴 수 있습니다.",
+      isUser: false,
+      timestamp: new Date()
+    }]
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
 
-  // 탭 변경 시 메시지 초기화
-  useEffect(() => {
-    const initialMessage = activeTab === 'consultation' 
-      ? "상담 업무를 도와드리겠습니다! 학생 상담, 학부모 상담, 상담일지 작성 등 무엇이든 도와드릴 수 있습니다."
-      : "안녕하세요! AI 업무 도우미입니다. 현재 제공하는 주요 기능들을 소개해드리겠습니다:\n\n문제지 생성: 과목별 맞춤형 문제지 자동 생성\n출결 관리: 출석 현황 정리, 결석자 추출, 통계 생성\n상담일지: 학생/학부모 상담 기록 및 관리\n성적 관리: 성적 입력, 분석, 리포트 생성\n일정 관리: 학교 행사, 시험 일정 등 관리\n\n어떤 업무를 도와드릴까요?";
-    
-    setMessages([{
-      id: 1,
-      message: initialMessage,
-      isUser: false,
-      timestamp: new Date()
-    }]);
-  }, [activeTab]);
+  // 현재 탭의 메시지 가져오기 (useMemo로 최적화)
+  const messages = useMemo(() => {
+    return tabMessages[activeTab] || [];
+  }, [tabMessages, activeTab]);
 
   // 메시지가 추가될 때마다 스크롤을 아래로 이동
   const scrollToBottom = () => {
@@ -41,6 +44,54 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // 드래그 리사이징 기능
+  const handleMouseDown = (e) => {
+    setIsResizing(true);
+    e.preventDefault();
+  };
+
+  const handleMouseMove = useCallback((e) => {
+    if (!isResizing) return;
+    
+    const newWidth = window.innerWidth - e.clientX;
+    const minWidth = 400;
+    const maxWidth = 1200;
+    
+    // 즉시 DOM 업데이트로 반응성 향상
+    if (newWidth >= minWidth && newWidth <= maxWidth) {
+      setSidebarWidth(newWidth);
+      // 실시간 DOM 업데이트
+      if (sidebarRef.current) {
+        sidebarRef.current.style.width = `${newWidth}px`;
+      }
+    }
+  }, [isResizing]);
+
+  const handleMouseUp = () => {
+    setIsResizing(false);
+  };
+
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    } else {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isResizing, handleMouseMove]);
 
   const handleSendMessage = async (userMessage, silent = false) => {
     if (!userMessage.trim()) return;
@@ -54,7 +105,10 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
         timestamp: new Date()
       };
       
-      setMessages(prev => [...prev, userMsg]);
+      setTabMessages(prev => ({
+        ...prev,
+        [activeTab]: [...(prev[activeTab] || []), userMsg]
+      }));
     }
     
     setIsLoading(true);
@@ -71,7 +125,10 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
         timestamp: new Date()
       };
       
-      setMessages(prev => [...prev, aiMsg]);
+      setTabMessages(prev => ({
+        ...prev,
+        [activeTab]: [...(prev[activeTab] || []), aiMsg]
+      }));
       
       // 일정 관련 작업인지 확인하고 프론트엔드 업데이트 트리거
       const isEventRelated = checkIfEventRelated(userMessage, response.response);
@@ -89,7 +146,10 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
         timestamp: new Date()
       };
       
-      setMessages(prev => [...prev, errorMsg]);
+      setTabMessages(prev => ({
+        ...prev,
+        [activeTab]: [...(prev[activeTab] || []), errorMsg]
+      }));
     } finally {
       setIsLoading(false);
     }
@@ -114,8 +174,24 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
   return (
     <>
       {/* Sidebar */}
-      <div className={`fixed top-0 right-0 h-full w-[600px] bg-white shadow-2xl transform transition-all duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'} z-50 border-l border-slate-200 flex`}>
+      <div 
+        ref={sidebarRef}
+        className={`fixed top-0 right-0 h-full bg-white shadow-2xl transform ${isResizing ? '' : 'transition-all duration-300 ease-in-out'} ${isOpen ? 'translate-x-0' : 'translate-x-full'} z-50 border-l border-slate-200 flex ${isResizing ? 'select-none' : ''}`}
+        style={{ width: `${sidebarWidth}px` }}
+      >
         
+        {/* 드래그 핸들 */}
+        <div 
+          className="w-2 bg-slate-200 hover:bg-slate-300 cursor-col-resize transition-colors duration-200 flex-shrink-0 relative group"
+          onMouseDown={handleMouseDown}
+        >
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="w-1 h-12 bg-slate-400 rounded-full group-hover:bg-slate-600 transition-colors duration-200"></div>
+          </div>
+          {/* 드래그 영역 확장 */}
+          <div className="absolute inset-0 w-4 -left-1 cursor-col-resize"></div>
+        </div>
+
         {/* Left Sub Sidebar */}
         <div className="w-48 bg-[#667EEA] flex flex-col">
           {/* Header */}
@@ -219,6 +295,7 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
                   message={msg.message} 
                   isUser={msg.isUser}
                   onSendMessage={handleSendMessage}
+                  timestamp={msg.timestamp}
                 />
               ))}
               {isLoading && (
