@@ -14,6 +14,40 @@ export default function ProblemWritingPage() {
   const [generatedTest, setGeneratedTest] = useState(null);
   const [streamingContent, setStreamingContent] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
+  const [activeTab, setActiveTab] = useState('problem'); // 'problem' 또는 'answer'
+
+  // 문제지와 정답을 분리하는 함수
+  const separateProblemAndAnswer = (content) => {
+    if (!content) return { problem: '', answer: '' };
+    
+    // 정답 섹션 찾기 (더 정확한 패턴)
+    const answerPatterns = [
+      /\[정답\]/i,
+      /\[답\]/i,
+      /정답:/i,
+      /답:/i,
+      /정답\s*$/i,
+      /답\s*$/i
+    ];
+    
+    let answerIndex = -1;
+    for (const pattern of answerPatterns) {
+      const match = content.match(pattern);
+      if (match) {
+        answerIndex = match.index;
+        break;
+      }
+    }
+    
+    if (answerIndex !== -1) {
+      const problem = content.substring(0, answerIndex).trim();
+      const answer = content.substring(answerIndex).trim();
+      return { problem, answer };
+    }
+    
+    // 정답 섹션이 없으면 전체를 문제로 처리
+    return { problem: content, answer: '정답이 포함되지 않았습니다.' };
+  };
 
                 // 과목 옵션
               const subjects = [
@@ -107,6 +141,7 @@ export default function ProblemWritingPage() {
       setIsStreaming(true);
       setStreamingContent('');
       setGeneratedTest({ loading: true, content: '' });
+      // 탭 상태는 유지 (사용자가 선택한 탭 그대로 유지)
 
       // API 호출을 위한 설정 객체 생성
       const settings = {
@@ -121,36 +156,27 @@ export default function ProblemWritingPage() {
 
       // 스트리밍 콜백 함수들
       const onChunk = (chunk) => {
-        // 디버깅: 받은 청크 확인
-        console.log('🔍 UI에서 받은 청크:', JSON.stringify(chunk));
-        console.log('🔍 청크 타입:', typeof chunk);
-        console.log('🔍 청크 길이:', chunk.length);
-        
-        setStreamingContent(prev => {
-          const newContent = prev + chunk;
-          console.log('🔍 새로운 콘텐츠:', JSON.stringify(newContent));
-          return newContent;
-        });
+        setStreamingContent(prev => prev + chunk);
       };
 
-      const onComplete = (data) => {
+      const onComplete = (finalContent) => {
         setIsStreaming(false);
         // 스트리밍 완료 시에도 같은 영역에서 자연스럽게 완성된 상태로 유지
         setGeneratedTest(prev => {
-          const finalContent = streamingContent || prev.content || '';
+          const finalText = finalContent || streamingContent || prev.content || '';
           return {
             loading: false,
-            content: finalContent,
+            content: finalText,
             settings: settings
           };
         });
-        console.log('스트리밍 완료:', data);
+        console.log('스트리밍 완료:', finalContent);
       };
 
       const onError = (error) => {
         setIsStreaming(false);
-        setGeneratedTest({
-          loading: false,
+                setGeneratedTest({
+                  loading: false,
           content: '문제지 생성 중 오류가 발생했습니다. 다시 시도해주세요.',
           error: true
         });
@@ -188,37 +214,36 @@ export default function ProblemWritingPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* 왼쪽: 통합된 설정 영역 */}
         <div className="lg:col-span-3">
-          <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg border border-gray-100 p-6">
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg border border-gray-100 p-6 min-h-[1000px]">
             <div className="mb-8">
               <h2 className="text-xl font-bold text-gray-800 mb-2">문제 출제 설정</h2>
               <p className="text-sm text-gray-600">과목, 단원, 난이도를 선택하여 맞춤형 문제지를 생성하세요</p>
             </div>
 
-            <div className="space-y-6">
+                        <div className="space-y-3">
               {/* 과목 선택 */}
               <div>
                 <label className="block text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                   과목 선택
                 </label>
-                <select
-                  value={selectedSubject}
-                  onChange={(e) => {
-                    setSelectedSubject(e.target.value);
-                    setSelectedUnits([]);
-                  }}
+                                  <select
+                    value={selectedSubject}
+                    onChange={(e) => {
+                      setSelectedSubject(e.target.value);
+                      setSelectedUnits([]);
+                    }}
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white hover:bg-gray-50"
-                >
-                  {subjects.map((subject) => (
-                    <option key={subject.value} value={subject.value}>
-                      {subject.label}
-                    </option>
-                  ))}
-                </select>
+                  >
+                    {subjects.map((subject) => (
+                      <option key={subject.value} value={subject.value}>
+                        {subject.label}
+                      </option>
+                    ))}
+                  </select>
               </div>
 
               {/* 단원 선택 */}
-              {selectedSubject && (
                 <div>
                   <label className="block text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
                     <div className="w-2 h-2 bg-green-500 rounded-full"></div>
@@ -269,10 +294,8 @@ export default function ProblemWritingPage() {
                     </div>
                   )}
                 </div>
-              )}
 
-              {/* 소단원 선택 (수학 1단원만) */}
-              {selectedSubject === 'math' && selectedUnits.some(unit => unit.value === 'unit1') && (
+              {/* 소단원 선택 */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
                     <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
@@ -320,7 +343,6 @@ export default function ProblemWritingPage() {
                     </div>
                   )}
                 </div>
-              )}
 
               {/* 난이도 선택 */}
               <div>
@@ -381,7 +403,7 @@ export default function ProblemWritingPage() {
                       placeholder="0"
                     />
                   </div>
-                  
+
                   {/* 주관식 */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
@@ -437,13 +459,13 @@ export default function ProblemWritingPage() {
             {/* 문제지 생성 버튼 */}
             <button
               onClick={generateTest}
-              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 px-6 rounded-xl hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-105 mt-8"
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 px-6 rounded-xl hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-105 mt-4"
             >
               <div className="flex items-center justify-center gap-3">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
-                문제지 생성하기
+              문제지 생성하기
               </div>
             </button>
           </div>
@@ -452,11 +474,11 @@ export default function ProblemWritingPage() {
                 {/* 오른쪽: 문제지 미리보기 */}
         <div className="lg:col-span-9">
           {generatedTest ? (
-            <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg border border-gray-100 p-6 sticky top-6">
+            <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg border border-gray-100 p-6 sticky top-6 min-h-[1000px]">
               
               {/* 실시간 스트리밍 콘텐츠 표시 */}
               {(isStreaming || (generatedTest && generatedTest.content)) && (
-                <div className="mb-6">
+              <div className="mb-6">
                   <div className="text-left">
                     {/* 상태 표시 */}
                     <div className="mb-4">
@@ -476,11 +498,54 @@ export default function ProblemWritingPage() {
                       </div>
                     </div>
                     
-                    <div className="bg-white p-8 rounded-xl border border-gray-100 shadow-sm min-h-[400px] max-h-[800px] overflow-y-auto">
-                      <div className="prose max-w-none text-gray-800 whitespace-pre-wrap">
-                        {streamingContent || generatedTest?.content}
-                        {isStreaming && <span className="animate-pulse text-blue-500">|</span>}
+                    {/* 탭 메뉴 */}
+                    <div className="mb-4 flex justify-start">
+                      <div className="inline-flex bg-gray-50 p-1 rounded-lg border border-gray-200">
+                        <button
+                          onClick={() => setActiveTab('problem')}
+                          className={`px-6 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
+                            activeTab === 'problem'
+                              ? 'bg-white text-slate-700 shadow-sm border border-gray-200'
+                              : 'text-gray-500 hover:text-gray-700'
+                          }`}
+                        >
+                          문제지
+                        </button>
+                        <button
+                          onClick={() => setActiveTab('answer')}
+                          className={`px-6 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
+                            activeTab === 'answer'
+                              ? 'bg-white text-slate-700 shadow-sm border border-gray-200'
+                              : 'text-gray-500 hover:text-gray-700'
+                          }`}
+                        >
+                          정답과 해설
+                        </button>
                       </div>
+              </div>
+              
+                    <div className="bg-white p-8 rounded-xl border border-gray-100 shadow-sm h-[800px] overflow-y-auto">
+                      <div className="prose max-w-none text-gray-800 whitespace-pre-wrap">
+                        {(() => {
+                          const content = streamingContent || generatedTest?.content || '';
+                          const { problem, answer } = separateProblemAndAnswer(content);
+                          
+                          if (activeTab === 'problem') {
+                            return (
+                              <>
+                                {problem}
+                                {isStreaming && <span className="animate-pulse text-blue-500">|</span>}
+                              </>
+                            );
+                          } else {
+                            return (
+                              <div className="text-gray-800">
+                                {answer}
+                              </div>
+                            );
+                          }
+                        })()}
+                  </div>
                     </div>
                   </div>
                 </div>
@@ -502,7 +567,7 @@ export default function ProblemWritingPage() {
               
             </div>
           ) : (
-            <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg border border-gray-100 p-6 sticky top-6">
+            <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg border border-gray-100 p-6 sticky top-6 min-h-[1000px]">
               
               <div className="text-center py-12">
                 <div className="w-20 h-20 bg-gradient-to-r from-emerald-100 to-teal-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
