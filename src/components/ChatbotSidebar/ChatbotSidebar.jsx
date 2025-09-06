@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
 import { sendChatMessage } from '../../api/chatbot';
@@ -7,6 +8,20 @@ import useUIStore from '../../store/useUIStore';
 const ChatbotSidebar = ({ isOpen, onClose }) => {
   const messagesEndRef = useRef(null);
   const { triggerEventRefresh } = useUIStore();
+  const location = useLocation();
+  
+  // URL 경로에 따른 초기 탭 설정
+  const getInitialTab = useCallback(() => {
+    switch (location.pathname) {
+      case '/schedule':
+        return 'schedule';
+      case '/problem-writing':
+        return 'exam';
+      case '/dashboard':
+      default:
+        return 'overview';
+    }
+  }, [location.pathname]);
   
   // 슬라이드 탭 상태 관리
   const [sidebarWidth, setSidebarWidth] = useState(700);
@@ -17,7 +32,7 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
   const [tabMessages, setTabMessages] = useState({
     overview: [{
       id: 1,
-      message: "안녕하세요! AI 업무 도우미입니다. 현재 제공하는 주요 기능들을 소개해드리겠습니다:\n\n출결 관리: 출석 현황 정리, 결석자 추출, 통계 생성\n성적 관리: 성적 입력, 분석, 리포트 생성\n일정 관리: 학교 행사, 시험 일정 등 관리\n공지사항 관리: 공지사항 조회\n\n어떤 업무를 도와드릴까요?",
+      message: "안녕하세요! 티봇에 오신 것을 환영합니다.\n\n저는 초등학교 교사님들의 업무를 효율적으로 도와드리는 AI 어시스턴트입니다. 상담, 일정, 시험지, 출결, 공지사항, 성적 관리 등 다양한 업무를 전문적으로 지원해드립니다.\n\n무엇을 도와드릴까요?",
       isUser: false,
       timestamp: new Date()
     }],
@@ -26,10 +41,40 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
       message: "상담 업무를 도와드리겠습니다! 학생 상담, 학부모 상담, 상담일지 작성 등 무엇이든 도와드릴 수 있습니다.",
       isUser: false,
       timestamp: new Date()
+    }],
+    schedule: [{
+      id: 1,
+      message: "일정 관리 업무를 도와드리겠습니다! 오늘 일정 확인, 일정 추가, 수정, 삭제 등 일정 관련 모든 업무를 도와드릴 수 있습니다.",
+      isUser: false,
+      timestamp: new Date()
+    }],
+    exam: [{
+      id: 1,
+      message: "시험지 관련 업무를 도와드리겠습니다! 문제지 생성, 시험지 관리, 문제 수정, 정답 확인 등 시험지 관련 모든 업무를 도와드릴 수 있습니다.",
+      isUser: false,
+      timestamp: new Date()
+    }],
+    attendance: [{
+      id: 1,
+      message: "출결 관리 업무를 도와드리겠습니다! 출석 현황 확인, 결석자 추출, 출결 통계 생성, 출결 관리 등 출결 관련 모든 업무를 도와드릴 수 있습니다.",
+      isUser: false,
+      timestamp: new Date()
+    }],
+    notice: [{
+      id: 1,
+      message: "공지사항 관리 업무를 도와드리겠습니다! 공지사항 조회, 공지사항 작성, 공지사항 수정, 공지사항 관리 등 공지사항 관련 모든 업무를 도와드릴 수 있습니다.",
+      isUser: false,
+      timestamp: new Date()
+    }],
+    grades: [{
+      id: 1,
+      message: "성적 관리 업무를 도와드리겠습니다! 성적 입력, 성적 분석, 성적 통계 생성, 성적 리포트 작성, 성적 관리 등 성적 관련 모든 업무를 도와드릴 수 있습니다.",
+      isUser: false,
+      timestamp: new Date()
     }]
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(getInitialTab());
 
   // 현재 탭의 메시지 가져오기 (useMemo로 최적화)
   const messages = useMemo(() => {
@@ -44,6 +89,11 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // URL 경로가 변경될 때 탭도 업데이트
+  useEffect(() => {
+    setActiveTab(getInitialTab());
+  }, [getInitialTab]);
 
   // 드래그 리사이징 기능
   const handleMouseDown = (e) => {
@@ -213,19 +263,16 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
             <div className="mb-6">
               <h3 className="text-sm font-semibold text-white/80 mb-3 px-2">주요 업무</h3>
               <div className="space-y-1">
-                <button
-                  onClick={() => setActiveTab('overview')}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    activeTab === 'overview'
-                      ? 'bg-white/20 text-white'
-                      : 'text-white/70 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                  주요 업무
-                </button>
+                 <button
+                   onClick={() => setActiveTab('overview')}
+                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                     activeTab === 'overview'
+                       ? 'bg-white/20 text-white'
+                       : 'text-white/70 hover:text-white hover:bg-white/10'
+                   }`}
+                 >
+                   티봇
+                 </button>
                 <button
                   onClick={() => setActiveTab('consultation')}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -238,6 +285,71 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                   </svg>
                   상담
+                </button>
+                <button
+                  onClick={() => setActiveTab('schedule')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'schedule'
+                      ? 'bg-white/20 text-white'
+                      : 'text-white/70 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  일정
+                </button>
+                <button
+                  onClick={() => setActiveTab('exam')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'exam'
+                      ? 'bg-white/20 text-white'
+                      : 'text-white/70 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  시험지
+                </button>
+                <button
+                  onClick={() => setActiveTab('attendance')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'attendance'
+                      ? 'bg-white/20 text-white'
+                      : 'text-white/70 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                  </svg>
+                  출결
+                </button>
+                <button
+                  onClick={() => setActiveTab('notice')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'notice'
+                      ? 'bg-white/20 text-white'
+                      : 'text-white/70 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                  </svg>
+                  공지사항
+                </button>
+                <button
+                  onClick={() => setActiveTab('grades')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'grades'
+                      ? 'bg-white/20 text-white'
+                      : 'text-white/70 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                  성적
                 </button>
               </div>
             </div>
@@ -266,12 +378,27 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
           <div className="flex-shrink-0 flex items-center justify-between p-6 bg-white border-b border-slate-200">
             <div>
               <h2 className="text-xl font-bold text-gray-900">
-                {activeTab === 'overview' ? 'AI 업무 도우미' : '상담 도우미'}
+                {activeTab === 'overview' ? 'AI 업무 도우미' : 
+                 activeTab === 'consultation' ? '상담 도우미' : 
+                 activeTab === 'schedule' ? '일정 도우미' : 
+                 activeTab === 'exam' ? '시험지 도우미' : 
+                 activeTab === 'attendance' ? '출결 도우미' : 
+                 activeTab === 'notice' ? '공지사항 도우미' : '성적 도우미'}
               </h2>
               <p className="text-sm text-gray-600 mt-1">
                 {activeTab === 'overview' 
                   ? '문제지 생성, 출결 관리, 상담일지, 성적 관리, 일정 관리' 
-                  : '학생 상담, 학부모 상담, 상담일지 작성'
+                  : activeTab === 'consultation'
+                  ? '학생 상담, 학부모 상담, 상담일지 작성'
+                  : activeTab === 'schedule'
+                  ? '오늘 일정 확인, 일정 추가, 수정, 삭제, 일정 관리'
+                  : activeTab === 'exam'
+                  ? '문제지 생성, 시험지 관리, 문제 수정, 정답 확인, 시험지 관련 업무'
+                  : activeTab === 'attendance'
+                  ? '출석 현황 확인, 결석자 추출, 출결 통계 생성, 출결 관리'
+                  : activeTab === 'notice'
+                  ? '공지사항 조회, 공지사항 작성, 공지사항 수정, 공지사항 관리'
+                  : '성적 입력, 성적 분석, 성적 통계 생성, 성적 리포트 작성, 성적 관리'
                 }
               </p>
             </div>
