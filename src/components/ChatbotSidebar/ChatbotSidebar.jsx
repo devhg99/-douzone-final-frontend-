@@ -19,7 +19,7 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
         return 'exam';
       case '/dashboard':
       default:
-        return 'overview';
+        return 'attendance';
     }
   }, [location.pathname]);
   
@@ -30,9 +30,9 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
   
   // 각 탭별로 메시지를 별도 관리
   const [tabMessages, setTabMessages] = useState({
-    overview: [{
+    attendance: [{
       id: 1,
-      message: "안녕하세요! 티봇에 오신 것을 환영합니다.\n\n저는 초등학교 교사님들의 업무를 효율적으로 도와드리는 AI 어시스턴트입니다. 상담, 일정, 시험지, 출결, 공지사항, 성적 관리 등 다양한 업무를 전문적으로 지원해드립니다.\n\n무엇을 도와드릴까요?",
+      message: "출결 관리 업무를 도와드리겠습니다! 출석 현황 확인, 결석자 추출, 출결 통계 생성, 출결 관리 등 출결 관련 모든 업무를 도와드릴 수 있습니다.",
       isUser: false,
       timestamp: new Date()
     }],
@@ -51,12 +51,6 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
     exam: [{
       id: 1,
       message: "시험지 관련 업무를 도와드리겠습니다! 문제지 생성, 시험지 관리, 문제 수정, 정답 확인 등 시험지 관련 모든 업무를 도와드릴 수 있습니다.",
-      isUser: false,
-      timestamp: new Date()
-    }],
-    attendance: [{
-      id: 1,
-      message: "출결 관리 업무를 도와드리겠습니다! 출석 현황 확인, 결석자 추출, 출결 통계 생성, 출결 관리 등 출결 관련 모든 업무를 도와드릴 수 있습니다.",
       isUser: false,
       timestamp: new Date()
     }],
@@ -262,17 +256,20 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
           <div className="flex-1 px-4">
             <div className="mb-6">
               <h3 className="text-sm font-semibold text-white/80 mb-3 px-2">주요 업무</h3>
-              <div className="space-y-1">
-                 <button
-                   onClick={() => setActiveTab('overview')}
-                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                     activeTab === 'overview'
-                       ? 'bg-white/20 text-white'
-                       : 'text-white/70 hover:text-white hover:bg-white/10'
-                   }`}
-                 >
-                   티봇
-                 </button>
+               <div className="space-y-1">
+                <button
+                  onClick={() => setActiveTab('attendance')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'attendance'
+                      ? 'bg-white/20 text-white'
+                      : 'text-white/70 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                  </svg>
+                  출결
+                </button>
                 <button
                   onClick={() => setActiveTab('consultation')}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -311,19 +308,6 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                   시험지
-                </button>
-                <button
-                  onClick={() => setActiveTab('attendance')}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    activeTab === 'attendance'
-                      ? 'bg-white/20 text-white'
-                      : 'text-white/70 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                  </svg>
-                  출결
                 </button>
                 <button
                   onClick={() => setActiveTab('notice')}
@@ -377,30 +361,27 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
           {/* Header */}
           <div className="flex-shrink-0 flex items-center justify-between p-6 bg-white border-b border-slate-200">
             <div>
-              <h2 className="text-xl font-bold text-gray-900">
-                {activeTab === 'overview' ? 'AI 업무 도우미' : 
-                 activeTab === 'consultation' ? '상담 도우미' : 
-                 activeTab === 'schedule' ? '일정 도우미' : 
-                 activeTab === 'exam' ? '시험지 도우미' : 
-                 activeTab === 'attendance' ? '출결 도우미' : 
-                 activeTab === 'notice' ? '공지사항 도우미' : '성적 도우미'}
-              </h2>
-              <p className="text-sm text-gray-600 mt-1">
-                {activeTab === 'overview' 
-                  ? '문제지 생성, 출결 관리, 상담일지, 성적 관리, 일정 관리' 
-                  : activeTab === 'consultation'
-                  ? '학생 상담, 학부모 상담, 상담일지 작성'
-                  : activeTab === 'schedule'
-                  ? '오늘 일정 확인, 일정 추가, 수정, 삭제, 일정 관리'
-                  : activeTab === 'exam'
-                  ? '문제지 생성, 시험지 관리, 문제 수정, 정답 확인, 시험지 관련 업무'
-                  : activeTab === 'attendance'
-                  ? '출석 현황 확인, 결석자 추출, 출결 통계 생성, 출결 관리'
-                  : activeTab === 'notice'
-                  ? '공지사항 조회, 공지사항 작성, 공지사항 수정, 공지사항 관리'
-                  : '성적 입력, 성적 분석, 성적 통계 생성, 성적 리포트 작성, 성적 관리'
-                }
-              </p>
+               <h2 className="text-xl font-bold text-gray-900">
+                 {activeTab === 'attendance' ? '출결 도우미' : 
+                  activeTab === 'consultation' ? '상담 도우미' : 
+                  activeTab === 'schedule' ? '일정 도우미' : 
+                  activeTab === 'exam' ? '시험지 도우미' : 
+                  activeTab === 'notice' ? '공지사항 도우미' : '성적 도우미'}
+               </h2>
+               <p className="text-sm text-gray-600 mt-1">
+                 {activeTab === 'attendance'
+                   ? '출석 현황 확인, 결석자 추출, 출결 통계 생성, 출결 관리'
+                   : activeTab === 'consultation'
+                   ? '학생 상담, 학부모 상담, 상담일지 작성'
+                   : activeTab === 'schedule'
+                   ? '오늘 일정 확인, 일정 추가, 수정, 삭제, 일정 관리'
+                   : activeTab === 'exam'
+                   ? '문제지 생성, 시험지 관리, 문제 수정, 정답 확인, 시험지 관련 업무'
+                   : activeTab === 'notice'
+                   ? '공지사항 조회, 공지사항 작성, 공지사항 수정, 공지사항 관리'
+                   : '성적 입력, 성적 분석, 성적 통계 생성, 성적 리포트 작성, 성적 관리'
+                 }
+               </p>
             </div>
             <button
               onClick={onClose}
