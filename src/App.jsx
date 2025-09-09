@@ -7,6 +7,7 @@ import DashboardPage from "./pages/Dashboard/DashboardPage";
 import LifeRecordPage from "./pages/LifeRecord/LifeRecordPage"; // ✅ 추가
 import SchedulePage from "./pages/SchedulePage"; // ✅ 추가
 import ProblemWritingPage from "./pages/ProblemWritingPage/ProblemWritingPage"; // ✅ 추가
+import CounselingPage from "./pages/CounselingPage";
 
 function App() {
   return (
@@ -41,6 +42,9 @@ function App() {
           
           {/* 문제 출제 */}
           <Route path="/problem-writing" element={<ProblemWritingPage />} />
+
+          {/* 상담 */}
+          <Route path="/counseling" element={<CounselingPage />} />
         </Route>
       </Routes>
     </Router>

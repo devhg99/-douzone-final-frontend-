@@ -45,7 +45,7 @@ const Header = () => {
         <div className="flex flex-col items-start gap-[7px]">
           <h1 className="text-[24px] font-bold text-[#2C3E50] leading-normal">{currentTitle}</h1>
           <p className="text-[14px] font-medium text-[#7F8C8D] leading-normal">
-            6학년 2반 - {today}
+            6학년 3반 - {today}
           </p>
         </div>
 
