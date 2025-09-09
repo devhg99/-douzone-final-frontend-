@@ -1,9 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import TimePicker from './TimePicker';
 import './SchedulePage.css';
 import { getMonthlyEvents, getWeeklyEvents, getEventColor } from '../../api/events';
 import useUIStore from '../../store/useUIStore';
+
+// 커스텀 한국 로케일 (요일을 "월", "화" 형태로 표시)
+const customKoLocale = {
+  localize: {
+    day: (n) => ['일', '월', '화', '수', '목', '금', '토'][n],
+    month: (n) => ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'][n],
+    dayPeriod: (n) => n === 0 ? '오전' : '오후',
+  },
+  formatLong: {
+    date: () => 'yyyy-MM-dd',
+    time: () => 'HH:mm',
+    dateTime: () => 'yyyy-MM-dd HH:mm',
+  },
+  match: {
+    day: () => /^[일월화수목금토]$/,
+    month: () => /^[1-9]|1[0-2]월$/,
+    dayPeriod: () => /^[오전오후]$/,
+  },
+  options: {
+    weekStartsOn: 1, // 월요일부터 시작
+  }
+};
 
 export default function SchedulePage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -19,7 +44,10 @@ export default function SchedulePage() {
   const [newEvent, setNewEvent] = useState({
     event_name: '',
     event_type: '시험/평가',
-    date: new Date().toLocaleDateString('sv-SE')
+    start_date: new Date().toLocaleDateString('sv-SE'),
+    end_date: new Date().toLocaleDateString('sv-SE'),
+    start_time: '',
+    end_time: ''
   });
   const [addingEvent, setAddingEvent] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
@@ -44,10 +72,22 @@ export default function SchedulePage() {
     const currentYear = currentMonth.getFullYear();
     const currentMonthNum = currentMonth.getMonth() + 1;
     
-    // 현재 월의 이벤트만 필터링
+    // 현재 월의 이벤트만 필터링 (기간 이벤트 포함)
     const monthlyEvents = events.filter(event => {
-      const eventDate = new Date(event.date);
-      return eventDate.getFullYear() === currentYear && eventDate.getMonth() + 1 === currentMonthNum;
+      const startDate = new Date(event.start_date);
+      const endDate = new Date(event.end_date || event.start_date);
+      
+      // 이벤트가 현재 월과 겹치는지 확인
+      const eventStartMonth = startDate.getMonth() + 1;
+      const eventEndMonth = endDate.getMonth() + 1;
+      const eventStartYear = startDate.getFullYear();
+      const eventEndYear = endDate.getFullYear();
+      
+      // 시작일이 현재 월에 있거나, 종료일이 현재 월에 있거나, 기간이 현재 월을 포함하는 경우
+      return (eventStartYear === currentYear && eventStartMonth === currentMonthNum) ||
+             (eventEndYear === currentYear && eventEndMonth === currentMonthNum) ||
+             (eventStartYear <= currentYear && eventEndYear >= currentYear && 
+              eventStartMonth <= currentMonthNum && eventEndMonth >= currentMonthNum);
     });
 
     // 전체 일정 수
@@ -117,7 +157,17 @@ export default function SchedulePage() {
       const endDate = endOfWeek.toLocaleDateString('sv-SE');
       
       const weeklyData = await getWeeklyEvents(startDate, endDate);
-      setWeeklyEvents(weeklyData);
+      
+      // 주간 이벤트를 기간에 따라 필터링
+      const filteredWeeklyEvents = weeklyData.filter(event => {
+        const eventStartDate = new Date(event.start_date);
+        const eventEndDate = new Date(event.end_date || event.start_date);
+        
+        // 이벤트가 이번 주와 겹치는지 확인
+        return (eventStartDate <= endOfWeek && eventEndDate >= startOfWeek);
+      });
+      
+      setWeeklyEvents(filteredWeeklyEvents);
     } catch (error) {
       console.error('주간 이벤트 로딩 실패:', error);
       setWeeklyEvents([]);
@@ -143,10 +193,17 @@ export default function SchedulePage() {
     }
   }, [shouldRefreshEvents, currentMonth, resetEventRefresh]);
 
-  // 날짜별 이벤트 그룹화
+  // 날짜별 이벤트 그룹화 (기간 이벤트 포함)
   const getEventsForDate = (date) => {
     const dateStr = date.toLocaleDateString('sv-SE'); // YYYY-MM-DD 형식 (로컬 시간 기준)
-    return events.filter(event => event.date === dateStr);
+    return events.filter(event => {
+      const startDate = new Date(event.start_date);
+      const endDate = new Date(event.end_date || event.start_date);
+      const currentDate = new Date(dateStr);
+      
+      // 현재 날짜가 시작일과 종료일 사이에 있는지 확인
+      return currentDate >= startDate && currentDate <= endDate;
+    });
   };
 
   // 캘린더 타일 렌더링
@@ -184,7 +241,10 @@ export default function SchedulePage() {
         body: JSON.stringify({
           event_name: newEvent.event_name,
           event_type: newEvent.event_type,
-          date: newEvent.date,
+          start_date: newEvent.start_date,
+          end_date: newEvent.end_date,
+          start_time: newEvent.start_time || null,
+          end_time: newEvent.end_time || null,
           description: null
         }),
       });
@@ -197,7 +257,10 @@ export default function SchedulePage() {
       setNewEvent({
         event_name: '',
         event_type: '시험/평가',
-        date: new Date().toLocaleDateString('sv-SE')
+        start_date: new Date().toLocaleDateString('sv-SE'),
+        end_date: new Date().toLocaleDateString('sv-SE'),
+        start_time: '',
+        end_time: ''
       });
 
       // 캘린더 새로고침
@@ -231,7 +294,10 @@ export default function SchedulePage() {
         body: JSON.stringify({
           event_name: editingEvent.event_name,
           event_type: editingEvent.event_type,
-          date: editingEvent.date,
+          start_date: editingEvent.start_date,
+          end_date: editingEvent.end_date,
+          start_time: editingEvent.start_time || null,
+          end_time: editingEvent.end_time || null,
           description: null
         }),
       });
@@ -272,7 +338,10 @@ export default function SchedulePage() {
         body: JSON.stringify({
           event_name: popupEditingEvent.event_name,
           event_type: popupEditingEvent.event_type,
-          date: popupEditingEvent.date,
+          start_date: popupEditingEvent.start_date,
+          end_date: popupEditingEvent.end_date,
+          start_time: popupEditingEvent.start_time || null,
+          end_time: popupEditingEvent.end_time || null,
           description: null
         }),
       });
@@ -348,7 +417,7 @@ export default function SchedulePage() {
                 onActiveStartDateChange={handleActiveStartDateChange}
                 onClickDay={handleDateClick}
                 className="w-full border-0 custom-calendar"
-                tileClassName={({ date, view }) => {
+                tileClassName={() => {
                   // 기본 스타일만 적용 (CSS에서 처리)
                   return '';
                 }}
@@ -432,34 +501,85 @@ export default function SchedulePage() {
                 />
               </div>
 
-              {/* 일정 유형과 날짜 선택 */}
+              {/* 일정 유형 선택 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  일정 유형
+                </label>
+                <select
+                  value={newEvent.event_type}
+                  onChange={(e) => setNewEvent({...newEvent, event_type: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#2E86C1] focus:border-transparent"
+                >
+                  {eventTypes.map((type) => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 시작일과 종료일 선택 */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    일정 유형
+                    시작일 *
                   </label>
-                  <select
-                    value={newEvent.event_type}
-                    onChange={(e) => setNewEvent({...newEvent, event_type: e.target.value})}
+                  <DatePicker
+                    selected={newEvent.start_date ? new Date(newEvent.start_date) : null}
+                    onChange={(date) => {
+                      const dateStr = date ? date.toISOString().split('T')[0] : '';
+                      setNewEvent({...newEvent, start_date: dateStr, end_date: dateStr});
+                    }}
+                    dateFormat="yyyy-MM-dd"
+                    locale={customKoLocale}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#2E86C1] focus:border-transparent"
-                  >
-                    {eventTypes.map((type) => (
-                      <option key={type.value} value={type.value}>
-                        {type.label}
-                      </option>
-                    ))}
-                  </select>
+                    placeholderText="시작일을 선택하세요"
+                  />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    날짜
+                    종료일
                   </label>
-                  <input
-                    type="date"
-                    value={newEvent.date}
-                    onChange={(e) => setNewEvent({...newEvent, date: e.target.value})}
+                  <DatePicker
+                    selected={newEvent.end_date ? new Date(newEvent.end_date) : null}
+                    onChange={(date) => {
+                      const dateStr = date ? date.toISOString().split('T')[0] : '';
+                      setNewEvent({...newEvent, end_date: dateStr});
+                    }}
+                    minDate={newEvent.start_date ? new Date(newEvent.start_date) : null}
+                    dateFormat="yyyy-MM-dd"
+                    locale={customKoLocale}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#2E86C1] focus:border-transparent"
+                    placeholderText="종료일을 선택하세요"
+                  />
+                </div>
+              </div>
+
+              {/* 시작시간과 종료시간 선택 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    시작시간
+                  </label>
+                   <TimePicker
+                     value={newEvent.start_time}
+                     onChange={(time) => {
+                       setNewEvent({...newEvent, start_time: time, end_time: time});
+                     }}
+                     placeholder="시작시간을 선택하세요"
+                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    종료시간
+                  </label>
+                  <TimePicker
+                    value={newEvent.end_time}
+                    onChange={(time) => setNewEvent({...newEvent, end_time: time})}
+                    placeholder="종료시간을 선택하세요"
                   />
                 </div>
               </div>
@@ -527,13 +647,46 @@ export default function SchedulePage() {
                               onChange={(e) => setEditingEvent({...editingEvent, event_name: e.target.value})}
                               className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#2E86C1]"
                             />
-                            <div className="grid grid-cols-2 gap-2">
-                              <input
-                                type="date"
-                                value={editingEvent.date}
-                                onChange={(e) => setEditingEvent({...editingEvent, date: e.target.value})}
-                                className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#2E86C1]"
-                              />
+                            <div className="space-y-2">
+                              <div className="grid grid-cols-2 gap-2">
+                                <DatePicker
+                                  selected={editingEvent.start_date ? new Date(editingEvent.start_date) : null}
+                                  onChange={(date) => {
+                                    const dateStr = date ? date.toISOString().split('T')[0] : '';
+                                    setEditingEvent({...editingEvent, start_date: dateStr, end_date: dateStr});
+                                  }}
+                                  dateFormat="yyyy-MM-dd"
+                                  locale={customKoLocale}
+                                  className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#2E86C1]"
+                                  placeholderText="시작일"
+                                />
+                                <DatePicker
+                                  selected={editingEvent.end_date ? new Date(editingEvent.end_date) : null}
+                                  onChange={(date) => {
+                                    const dateStr = date ? date.toISOString().split('T')[0] : '';
+                                    setEditingEvent({...editingEvent, end_date: dateStr});
+                                  }}
+                                  minDate={editingEvent.start_date ? new Date(editingEvent.start_date) : null}
+                                  dateFormat="yyyy-MM-dd"
+                                  locale={customKoLocale}
+                                  className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#2E86C1]"
+                                  placeholderText="종료일"
+                                />
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                 <TimePicker
+                                   value={editingEvent.start_time || ''}
+                                   onChange={(time) => setEditingEvent({...editingEvent, start_time: time, end_time: time})}
+                                   placeholder="시작시간"
+                                   className="text-xs"
+                                 />
+                                <TimePicker
+                                  value={editingEvent.end_time || ''}
+                                  onChange={(time) => setEditingEvent({...editingEvent, end_time: time})}
+                                  placeholder="종료시간"
+                                  className="text-xs"
+                                />
+                              </div>
                               <div className="flex gap-1">
                                 <button
                                   onClick={handleEditEvent}
@@ -555,11 +708,18 @@ export default function SchedulePage() {
                           <>
                             <div className="font-medium text-gray-900 text-sm">{event.event_name}</div>
                             <div className="text-xs text-gray-600">
-                              {new Date(event.date).toLocaleDateString('ko-KR', { 
+                              {new Date(event.start_date).toLocaleDateString('ko-KR', { 
                                 month: 'short', 
                                 day: 'numeric',
                                 weekday: 'short'
                               })}
+                              {event.end_date && event.end_date !== event.start_date && (
+                                <span> - {new Date(event.end_date).toLocaleDateString('ko-KR', { 
+                                  month: 'short', 
+                                  day: 'numeric',
+                                  weekday: 'short'
+                                })}</span>
+                              )}
                             </div>
                           </>
                         )}
@@ -655,13 +815,46 @@ export default function SchedulePage() {
                           onChange={(e) => setPopupEditingEvent({...popupEditingEvent, event_name: e.target.value})}
                           className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#2E86C1]"
                         />
-                        <div className="grid grid-cols-2 gap-2">
-                          <input
-                            type="date"
-                            value={popupEditingEvent.date}
-                            onChange={(e) => setPopupEditingEvent({...popupEditingEvent, date: e.target.value})}
-                            className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#2E86C1]"
-                          />
+                        <div className="space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            <DatePicker
+                              selected={popupEditingEvent.start_date ? new Date(popupEditingEvent.start_date) : null}
+                              onChange={(date) => {
+                                const dateStr = date ? date.toISOString().split('T')[0] : '';
+                                setPopupEditingEvent({...popupEditingEvent, start_date: dateStr, end_date: dateStr});
+                              }}
+                              dateFormat="yyyy-MM-dd"
+                              locale={customKoLocale}
+                              className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#2E86C1]"
+                              placeholderText="시작일"
+                            />
+                            <DatePicker
+                              selected={popupEditingEvent.end_date ? new Date(popupEditingEvent.end_date) : null}
+                              onChange={(date) => {
+                                const dateStr = date ? date.toISOString().split('T')[0] : '';
+                                setPopupEditingEvent({...popupEditingEvent, end_date: dateStr});
+                              }}
+                              minDate={popupEditingEvent.start_date ? new Date(popupEditingEvent.start_date) : null}
+                              dateFormat="yyyy-MM-dd"
+                              locale={customKoLocale}
+                              className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#2E86C1]"
+                              placeholderText="종료일"
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                             <TimePicker
+                               value={popupEditingEvent.start_time || ''}
+                               onChange={(time) => setPopupEditingEvent({...popupEditingEvent, start_time: time, end_time: time})}
+                               placeholder="시작시간"
+                               className="text-xs"
+                             />
+                            <TimePicker
+                              value={popupEditingEvent.end_time || ''}
+                              onChange={(time) => setPopupEditingEvent({...popupEditingEvent, end_time: time})}
+                              placeholder="종료시간"
+                              className="text-xs"
+                            />
+                          </div>
                           <div className="flex gap-1">
                             <button
                               onClick={handlePopupEditEvent}
