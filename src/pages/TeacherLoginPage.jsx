@@ -34,11 +34,11 @@ const TeacherLoginPage = () => {
         <div className="text-center max-w-sm">
           <img
             src={logo}
-            alt="서울교육초등학교 로고"
+            alt="티봇초등학교 로고"
             className="w-32 h-32 mx-auto mb-6"
           />
           <h1 className="text-xl font-semibold text-gray-900 mb-2">
-            서울교육초등학교
+            티봇초등학교
           </h1>
           <p className="text-sm text-gray-600 leading-relaxed">
             올바른 인성을 기르는
