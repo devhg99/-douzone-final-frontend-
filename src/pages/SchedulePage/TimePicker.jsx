@@ -19,10 +19,36 @@ const TimePicker = ({
         minute: parseInt(minutes)
       };
     }
-    return { period: 'AM', hour: 9, minute: 0 };
+    return { period: 'AM', hour: null, minute: null };
   });
 
   const dropdownRef = useRef(null);
+  const isInternalUpdate = useRef(false);
+
+  // value prop이 변경될 때 내부 상태 업데이트 (무한 루프 방지)
+  useEffect(() => {
+    if (isInternalUpdate.current) {
+      isInternalUpdate.current = false;
+      return;
+    }
+
+    if (value) {
+      const [hours, minutes] = value.split(':');
+      const hour = parseInt(hours);
+      const newTime = {
+        period: hour >= 12 ? 'PM' : 'AM',
+        hour: hour === 0 ? 12 : hour > 12 ? hour - 12 : hour,
+        minute: parseInt(minutes)
+      };
+      
+      // 현재 상태와 다를 때만 업데이트
+      if (time.hour !== newTime.hour || time.minute !== newTime.minute || time.period !== newTime.period) {
+        setTime(newTime);
+      }
+    } else if (time.hour !== null || time.minute !== null) {
+      setTime({ period: 'AM', hour: null, minute: null });
+    }
+  }, [value]);
 
   // 외부 클릭 시 드롭다운 닫기
   useEffect(() => {
@@ -38,13 +64,27 @@ const TimePicker = ({
 
   // 시간 변경 시 부모 컴포넌트에 전달
   useEffect(() => {
+    // 시간이나 분이 null이면 빈 문자열 전달
+    if (time.hour === null || time.minute === null) {
+      if (value !== '') {
+        isInternalUpdate.current = true;
+        onChange('');
+      }
+      return;
+    }
+    
     const hour24 = time.period === 'AM' 
       ? (time.hour === 12 ? 0 : time.hour)
       : (time.hour === 12 ? 12 : time.hour + 12);
     
     const timeString = `${hour24.toString().padStart(2, '0')}:${time.minute.toString().padStart(2, '0')}`;
-    onChange(timeString);
-  }, [time, onChange]);
+    
+    // 현재 value와 다를 때만 onChange 호출
+    if (value !== timeString) {
+      isInternalUpdate.current = true;
+      onChange(timeString);
+    }
+  }, [time, onChange, value]);
 
   const handlePeriodToggle = () => {
     setTime(prev => ({
@@ -54,7 +94,11 @@ const TimePicker = ({
   };
 
   const handleHourChange = (hour) => {
-    setTime(prev => ({ ...prev, hour }));
+    setTime(prev => ({ 
+      ...prev, 
+      hour,
+      minute: prev.minute === null ? 0 : prev.minute  // 시간 선택 시 분이 null이면 0으로 설정
+    }));
   };
 
   const handleMinuteChange = (minute) => {
@@ -113,10 +157,11 @@ const TimePicker = ({
             <div className="selector-group">
               <label>시간</label>
               <select 
-                value={time.hour} 
+                value={time.hour || ''} 
                 onChange={(e) => handleHourChange(parseInt(e.target.value))}
                 className="time-select"
               >
+                <option value="">시</option>
                 {hours.map(hour => (
                   <option key={hour} value={hour}>{hour}시</option>
                 ))}
@@ -126,10 +171,11 @@ const TimePicker = ({
             <div className="selector-group">
               <label>분</label>
               <select 
-                value={time.minute} 
+                value={time.minute || ''} 
                 onChange={(e) => handleMinuteChange(parseInt(e.target.value))}
                 className="time-select"
               >
+                <option value="">분</option>
                 {minutes.map(minute => (
                   <option key={minute} value={minute}>{minute.toString().padStart(2, '0')}분</option>
                 ))}
