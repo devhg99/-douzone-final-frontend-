@@ -36,6 +36,35 @@ export default function SchedulePage() {
   const [events, setEvents] = useState([]);
   const [weeklyEvents, setWeeklyEvents] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // 시간 포맷팅 함수 (오전9시, 오후3시 형태)
+  const formatTimeForDisplay = (timeString) => {
+    if (!timeString) return '';
+    
+    const [hours, minutes] = timeString.split(':');
+    const hour = parseInt(hours);
+    const minute = parseInt(minutes);
+    
+    const period = hour >= 12 ? '오후' : '오전';
+    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+    
+    if (minute === 0) {
+      return `${period}${displayHour}시`;
+    } else {
+      return `${period}${displayHour}시${minute}분`;
+    }
+  };
+
+  // 시간 범위 포맷팅 함수
+  const formatTimeRange = (startTime, endTime) => {
+    if (!startTime || !endTime) return '';
+    
+    if (startTime === endTime) {
+      return formatTimeForDisplay(startTime);
+    } else {
+      return `${formatTimeForDisplay(startTime)}-${formatTimeForDisplay(endTime)}`;
+    }
+  };
   
   // 전역 상태에서 일정 새로고침 트리거 감지
   const { shouldRefreshEvents, resetEventRefresh } = useUIStore();
@@ -706,7 +735,14 @@ export default function SchedulePage() {
                         ) : (
                           // 일반 모드
                           <>
-                            <div className="font-medium text-gray-900 text-sm">{event.event_name}</div>
+                            <div className="font-medium text-gray-900 text-sm">
+                              {event.event_name}
+                              {event.start_time && event.end_time && (
+                                <span className="text-gray-600 font-normal ml-2">
+                                  ({formatTimeRange(event.start_time, event.end_time)})
+                                </span>
+                              )}
+                            </div>
                             <div className="text-xs text-gray-600">
                               {new Date(event.start_date).toLocaleDateString('ko-KR', { 
                                 month: 'short', 
@@ -802,6 +838,11 @@ export default function SchedulePage() {
                     {event.description && (
                       <div>
                         {event.description}
+                      </div>
+                    )}
+                    {event.start_time && event.end_time && (
+                      <div>
+                        {formatTimeRange(event.start_time, event.end_time)}
                       </div>
                     )}
                   </div>
