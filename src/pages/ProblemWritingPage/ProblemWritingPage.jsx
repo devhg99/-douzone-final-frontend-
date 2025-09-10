@@ -590,9 +590,9 @@ export default function ProblemWritingPage() {
                       </div>
                     </div>
               
-                    <div className="bg-white p-8 rounded-xl border border-gray-100 shadow-sm h-[800px] overflow-y-auto">
+                    <div className="bg-white rounded-xl border border-gray-100 shadow-sm h-[800px] overflow-y-auto">
                       {isEditMode ? (
-                        <div className="h-full">
+                        <div className="h-full p-8">
                           <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                             <div className="flex items-center gap-2 text-yellow-800">
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -610,22 +610,147 @@ export default function ProblemWritingPage() {
                           />
                         </div>
                       ) : (
-                        <div className="prose max-w-none text-gray-800 whitespace-pre-wrap">
+                        <div className="p-8">
                           {(() => {
                             const content = streamingContent || generatedTest?.content || '';
                             const { problem, answer } = separateProblemAndAnswer(content);
                             
                             if (activeTab === 'problem') {
                               return (
-                                <>
-                                  {problem}
-                                  {isStreaming && <span className="animate-pulse text-blue-500">|</span>}
-                                </>
+                                <div className="professional-problem-layout">
+                                  <div className="problem-header mb-8">
+                                    <div className="text-center border-b border-gray-200 pb-4">
+                                      <h1 className="text-2xl font-bold text-gray-800 mb-2">수학 문제지</h1>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="problem-content">
+                                    {problem.split('\n').map((line, index) => {
+                                      // 문제 번호 감지 (1번, 2번 등)
+                                      if (line.match(/^\d+번\./)) {
+                                        return (
+                                          <div key={index} className="mb-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-l-4 border-blue-500">
+                                            <div className="text-lg font-bold text-blue-800 mb-3">{line}</div>
+                                          </div>
+                                        );
+                                      }
+                                      
+                                      // 선택지 감지 (①, ②, ③, ④)
+                                      if (line.match(/^[①②③④⑤⑥⑦⑧⑨⑩]/)) {
+                                        return (
+                                          <div key={index} className="ml-6 mb-3 p-3 bg-white rounded-md border border-gray-200 shadow-sm">
+                                            <span className="text-gray-700 leading-relaxed">{line}</span>
+                                          </div>
+                                        );
+                                      }
+                                      
+                                      // 빈 줄
+                                      if (line.trim() === '') {
+                                        return <div key={index} className="mb-4"></div>;
+                                      }
+                                      
+                                      // 일반 텍스트
+                                      return (
+                                        <div key={index} className="mb-4 text-gray-800 leading-relaxed">
+                                          {line}
+                                        </div>
+                                      );
+                                    })}
+                                    
+                                  </div>
+                                  
+                                  {isStreaming && (
+                                    <div className="mt-6 text-center">
+                                      <span className="inline-flex items-center gap-2 text-blue-500">
+                                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                                        생성 중...
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
                               );
                             } else {
                               return (
-                                <div className="text-gray-800">
-                                  {answer}
+                                <div className="professional-answer-layout">
+                                  <div className="answer-header mb-8">
+                                    <div className="text-center border-b border-gray-200 pb-4">
+                                      <h1 className="text-2xl font-bold text-gray-800 mb-2">정답과 해설</h1>
+                                      <p className="text-sm text-gray-500">각 문제의 정답과 상세한 해설을 확인하세요</p>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="answer-content">
+                                    {(() => {
+                                      const lines = answer.split('\n');
+                                      const problems = [];
+                                      let currentProblem = null;
+                                      
+                                      for (let i = 0; i < lines.length; i++) {
+                                        const line = lines[i];
+                                        
+                                        // 정답 섹션 헤더는 건너뛰기
+                                        if (line.includes('[정답]') || line.includes('정답:')) {
+                                          continue;
+                                        }
+                                        
+                                        // 문제 번호 감지 (1번, 2번 등)
+                                        if (line.match(/^\d+번\./)) {
+                                          // 이전 문제가 있으면 저장
+                                          if (currentProblem) {
+                                            problems.push(currentProblem);
+                                          }
+                                          
+                                          // 새 문제 시작
+                                          const parts = line.split('.');
+                                          const problemNum = parts[0];
+                                          const answer = parts[1]?.trim() || '';
+                                          
+                                          currentProblem = {
+                                            number: problemNum,
+                                            answer: answer,
+                                            explanation: []
+                                          };
+                                        } else if (currentProblem && line.trim()) {
+                                          // 해설 내용 추가
+                                          currentProblem.explanation.push(line.trim());
+                                        }
+                                      }
+                                      
+                                      // 마지막 문제 추가
+                                      if (currentProblem) {
+                                        problems.push(currentProblem);
+                                      }
+                                      
+                                      return problems.map((problem, index) => (
+                                        <div key={index} className="mb-8 p-8 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200">
+                                          <div className="flex items-start gap-6">
+                                            <div className="w-12 h-12 bg-gray-100 border-2 border-gray-200 rounded-lg flex items-center justify-center text-lg font-bold text-gray-700 flex-shrink-0">
+                                              {problem.number}
+                                            </div>
+                                            <div className="flex-1">
+                                              {problem.answer && (
+                                                <div className="mb-4 p-4 bg-gray-50 rounded-lg border-l-4 border-gray-300">
+                                                  <div className="text-lg font-semibold text-gray-800">{problem.answer}</div>
+                                                </div>
+                                              )}
+                                              {problem.explanation.length > 0 && (
+                                                <div className="space-y-3">
+                                                  <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">해설</h4>
+                                                  <div className="space-y-2">
+                                                    {problem.explanation.map((line, lineIndex) => (
+                                                      <p key={lineIndex} className="text-gray-700 leading-relaxed">
+                                                        {line}
+                                                      </p>
+                                                    ))}
+                                                  </div>
+                                                </div>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ));
+                                    })()}
+                                  </div>
                                 </div>
                               );
                             }
