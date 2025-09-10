@@ -292,7 +292,6 @@ const CounselingPage = () => {
                   <button onClick={handleSave} className="btn-secondary">
                     💾 저장
                   </button>
-                  <button className="btn-tertiary">🖨 인쇄</button>
                 </div>
               </div>
 
