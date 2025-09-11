@@ -77,7 +77,7 @@ export default function LifeRecordPage() {
   useEffect(() => {
     (async () => {
       try {
-        const data = await getJSON(apiUrl(`v1/students/`));
+        const data = await getJSON(apiUrl(`students/`));
         // data 예: [{id, name, ...}]
         const options = (data || []).map((s) => ({ label: s.name, value: String(s.id) }));
         setStudents(options);
