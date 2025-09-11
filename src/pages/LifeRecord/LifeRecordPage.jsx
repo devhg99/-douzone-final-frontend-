@@ -79,20 +79,8 @@ export default function LifeRecordPage() {
       try {
         const data = await getJSON(apiUrl(`students/`));
         // data 예: [{id, name, ...}]
-
-      const list =
-        Array.isArray(data) ? data :
-        Array.isArray(data?.data) ? data.data :
-        Array.isArray(data?.results) ? data.results :
-        Array.isArray(data?.items) ? data.items :
-        [];
-
-      const options = list.map((s: any) => ({
-        label: s?.name ?? s?.username ?? s?.title ?? String(s?.id ?? ''),
-        value: String(s?.id ?? s?.value ?? s?.uuid ?? s?.pk ?? s?.name ?? ''),
-      }));
-
-      setStudents(options);
+        const options = (data || []).map((s) => ({ label: s.name, value: String(s.id) }));
+        setStudents(options);
       } catch (e) {
         console.error("학생 목록 조회 실패:", e);
         // 최소한의 폴백(데모)
