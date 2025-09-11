@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./CounselingPage.css";
 
-const API_BASE = "http://localhost:8000/v1/counseling";
+const API_BASE = `${process.env.REACT_APP_API_BASE_URL}/counseling`;
 
 const CounselingPage = () => {
   const [students, setStudents] = useState([]);
