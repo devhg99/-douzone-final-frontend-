@@ -91,6 +91,7 @@ async function loadSubjectMap(apiUrl) {
   try {
     const raw = await getJSON(apiUrl(`subjects`));
     const arr = unwrap(raw);
+
     if (Array.isArray(arr) && arr.length) {
       const m = {};
       for (const it of arr) {
@@ -98,10 +99,17 @@ async function loadSubjectMap(apiUrl) {
         const name = it?.name ?? it?.subject_name;
         if (Number.isFinite(id) && name) m[id] = name;
       }
-      return Object.keys(m).length ? m : FALLBACK_SUBJECT_MAP;
+      if (Object.keys(m).length) {
+        return m;
+      }
     }
-  } catch (_) {}
-  return FALLBACK_SUBJECT_MAP;
+    // subjects 응답이 비어있으면 기본 맵 사용
+    return FALLBACK_SUBJECT_MAP;
+  } catch (e) {
+    // 핸들링을 명시적으로 넣어서 no-empty 회피 + 로그 남김
+    console.warn("subjects fetch failed -> fallback map 사용", e);
+    return FALLBACK_SUBJECT_MAP;
+  }
 }
 
 export default function LifeRecordPage() {
