@@ -79,8 +79,24 @@ export default function LifeRecordPage() {
       try {
         const data = await getJSON(apiUrl(`students/`));
         // data 예: [{id, name, ...}]
-        const options = (data || []).map((s) => ({ label: s.name, value: String(s.id) }));
-        setStudents(options);
+        const list =
+          Array.isArray(data) ? data :
+          Array.isArray(data?.data) ? data.data :
+          Array.isArray(data?.results) ? data.results :
+          Array.isArray(data?.items) ? data.items :
+          [];
+
+      // 3) 타입/스키마 보정: id, name이 없으면 최대한 유추
+          const normalized = list.map((s) => ({
+        // label은 name/username/title 등 흔한 키에서 우선 추출
+          label: s?.student_name ?? s?.name ?? s?.username ?? s?.title ?? String(s?.id ?? ''),
+        // value는 문자열화된 id(없으면 label)
+          value: tring(s?.id ?? s?.value ?? s?.uuid ?? s?.pk ?? (s?.student_name ?? s?.name ?? '')),
+        // 필요하면 원본도 보관
+          _raw: s,
+        }));
+        
+        setStudents(normalized);
       } catch (e) {
         console.error("학생 목록 조회 실패:", e);
         // 최소한의 폴백(데모)
