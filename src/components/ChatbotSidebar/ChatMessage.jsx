@@ -11,8 +11,11 @@ const ChatMessage = ({ message, isUser = false, onSendMessage, timestamp }) => {
     
     if (!text) return '';
     
-    // 대괄호 제거
-    const cleanText = text.replace(/\[([^\]]*)\]/g, '$1');
+    // 공지사항 응답 마커 확인
+    const isNoticeResponse = text.includes('<!-- NOTICE_RESPONSE -->');
+    
+    // 마커 제거
+    const cleanText = text.replace(/<!-- NOTICE_RESPONSE -->/g, '').replace(/\[([^\]]*)\]/g, '$1');
     
     // ****텍스트**** 패턴을 굵게 처리하는 함수
     const formatBoldText = (text) => {
@@ -23,8 +26,8 @@ const ChatMessage = ({ message, isUser = false, onSendMessage, timestamp }) => {
     // 일정 관련 텍스트 감지 및 버튼 추가 (더 정확한 패턴)
     const scheduleRegex = /(\*\s*[^*\n]*?(?:수학여행|대청소|체육대회|운동회|시험|평가|행사)[^*\n]*?(?:일정|하는 날|예정|있어요|해요)[^*\n]*?)/g;
     
-    // 미래 일정 감지 (공지사항에서)
-    const futureScheduleRegex = /(\d+월\s*\d+일[^:]*:(?:[^.]*?(?:예정되어\s*있습니다|있습니다)[^.]*?))/g;
+    // 미래 일정 감지 (공지사항 content에서 - 내용이 있는 경우만)
+    const futureScheduleRegex = /(\d+월\s*\d+일[^:]*:[^.]*?(?:예정되어\s*있습니다|있습니다|예정|일정|행사|대회|시험|평가|축제|공연|체험|먹거리|장터|부스|한마당|예방접종|예방|접종|독감|보건)[^.]*?)(?:\.|$)/g;
     let lastIndex = 0;
     const elements = [];
     const processedSchedules = new Set(); // 중복 방지를 위한 Set
@@ -62,42 +65,44 @@ const ChatMessage = ({ message, isUser = false, onSendMessage, timestamp }) => {
       lastIndex = match.index + match[0].length;
     }
     
-    // 미래 일정 찾기 (공지사항에서)
-    while ((match = futureScheduleRegex.exec(cleanText)) !== null) {
-      // 미래 일정 텍스트 이전 부분 추가
-      if (match.index > lastIndex) {
-        const beforeText = cleanText.slice(lastIndex, match.index);
-        if (beforeText) {
-          elements.push(beforeText);
+    // 미래 일정 찾기 (공지사항에서만)
+    if (isNoticeResponse) {
+      while ((match = futureScheduleRegex.exec(cleanText)) !== null) {
+        // 미래 일정 텍스트 이전 부분 추가
+        if (match.index > lastIndex) {
+          const beforeText = cleanText.slice(lastIndex, match.index);
+          if (beforeText) {
+            elements.push(beforeText);
+          }
         }
+        
+        // 미래 일정 텍스트와 버튼 추가
+        const futureScheduleText = match[1];
+        
+        // 중복 체크
+        if (!processedSchedules.has(futureScheduleText)) {
+          processedSchedules.add(futureScheduleText);
+          elements.push(
+            <div key={`future-schedule-${match.index}`} className="mb-2">
+              <div className="text-sm">{futureScheduleText}</div>
+              <button
+                onClick={() => handleScheduleAdd(futureScheduleText)}
+                className="group relative inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 bg-[#667EEA]/10 text-[#667EEA] text-xs font-medium rounded-lg hover:bg-[#667EEA]/20 transition-all duration-300 shadow-sm hover:shadow-lg border border-[#667EEA]/20 hover:border-[#667EEA]/30"
+              >
+                <div className="flex items-center justify-center w-4 h-4 rounded-full bg-[#667EEA]/20 group-hover:bg-[#667EEA]/30 transition-colors duration-300">
+                  <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                </div>
+                <span className="relative z-10">일정 추가</span>
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-white/0 via-white/10 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              </button>
+            </div>
+          );
+        }
+        
+        lastIndex = match.index + match[0].length;
       }
-      
-      // 미래 일정 텍스트와 버튼 추가
-      const futureScheduleText = match[1];
-      
-      // 중복 체크
-      if (!processedSchedules.has(futureScheduleText)) {
-        processedSchedules.add(futureScheduleText);
-        elements.push(
-          <div key={`future-schedule-${match.index}`} className="mb-2">
-            <div className="text-sm">{futureScheduleText}</div>
-            <button
-              onClick={() => handleScheduleAdd(futureScheduleText)}
-              className="group relative inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 bg-[#667EEA]/10 text-[#667EEA] text-xs font-medium rounded-lg hover:bg-[#667EEA]/20 transition-all duration-300 shadow-sm hover:shadow-lg border border-[#667EEA]/20 hover:border-[#667EEA]/30"
-            >
-              <div className="flex items-center justify-center w-4 h-4 rounded-full bg-[#667EEA]/20 group-hover:bg-[#667EEA]/30 transition-colors duration-300">
-                <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-              </div>
-              <span className="relative z-10">일정 추가</span>
-              <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-white/0 via-white/10 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            </button>
-          </div>
-        );
-      }
-      
-      lastIndex = match.index + match[0].length;
     }
     
     // 남은 텍스트 추가
@@ -153,19 +158,74 @@ const ChatMessage = ({ message, isUser = false, onSendMessage, timestamp }) => {
   const handleScheduleAdd = (scheduleText) => {
     console.log('일정 추가 버튼 클릭:', scheduleText);
     
-    // 텍스트에서 날짜와 일정 제목 추출 (더 유연한 정규식)
-    const dateMatch = scheduleText.match(/(\d+월\s*\d+일)/);
-    const eventMatch = scheduleText.match(/(수학|경연|대회|축구|경기|관람|행사|시험|평가|대청소|체육대회|운동회|취침|수학여행)/);
+    // 콜론(:) 뒤의 내용에서 실제 일정 날짜와 제목 추출
+    const colonIndex = scheduleText.indexOf(':');
+    if (colonIndex === -1) {
+      console.log('콜론을 찾을 수 없음');
+      return;
+    }
     
-    console.log('날짜 매칭:', dateMatch);
+    const contentAfterColon = scheduleText.substring(colonIndex + 1).trim();
+    console.log('콜론 뒤 내용:', contentAfterColon);
+    
+    // 해당 일정과 관련된 공지사항 내용만 추출
+    const getRelevantNoticeContent = (scheduleText, fullMessage) => {
+      // 콜론(:) 앞의 날짜 부분 추출
+      const colonIndex = scheduleText.indexOf(':');
+      if (colonIndex === -1) return fullMessage;
+      
+      const datePart = scheduleText.substring(0, colonIndex).trim();
+      
+      // 전체 메시지에서 해당 날짜와 관련된 부분만 찾기
+      const lines = fullMessage.split('\n');
+      let relevantContent = '';
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (line.includes(datePart)) {
+          // 해당 날짜 라인부터 다음 날짜 라인 전까지의 내용 수집
+          relevantContent = line;
+          for (let j = i + 1; j < lines.length; j++) {
+            const nextLine = lines[j].trim();
+            // 다음 날짜 라인이 나오면 중단
+            if (nextLine.match(/^\d+월\s*\d+일/)) {
+              break;
+            }
+            relevantContent += '\n' + nextLine;
+          }
+          break;
+        }
+      }
+      
+      // 날짜 부분(예: "09월 09일:") 제거
+      if (relevantContent) {
+        // 날짜 패턴 제거 (예: "09월 09일:", "09월 09일 :")
+        relevantContent = relevantContent.replace(/^\d+월\s*\d+일\s*:\s*/, '');
+        // 앞의 "- " 제거 (예: "- 2025학년도...")
+        relevantContent = relevantContent.replace(/^-\s*/, '');
+        // 앞뒤 공백 정리
+        relevantContent = relevantContent.trim();
+      }
+      
+      return relevantContent || fullMessage;
+    };
+    
+    const relevantNoticeContent = getRelevantNoticeContent(scheduleText, message);
+    
+    // 기간 일정 감지 (부터 ~까지) - 괄호가 있는 날짜 형식도 지원
+    const periodMatch = contentAfterColon.match(/(\d+월\s*\d+일(?:\([^)]*\))?)부터\s*(\d+월\s*\d+일(?:\([^)]*\))?)까지/);
+    const eventMatch = contentAfterColon.match(/(예방접종|수학|경연|대회|축구|경기|관람|행사|시험|평가|대청소|체육대회|운동회|취침|수학여행|공사|바닥|스크린|중간고사|기말고사|고사|축제|공연|체험|먹거리|장터|부스|한마당|예방|접종|독감|보건)/);
+    
+    console.log('기간 매칭:', periodMatch);
     console.log('이벤트 매칭:', eventMatch);
     
-    if (dateMatch && eventMatch) {
-      const date = dateMatch[1];
+    if (periodMatch && eventMatch) {
+      const startDate = periodMatch[1];
+      const endDate = periodMatch[2];
       const event = eventMatch[1];
       
-      // 메시지 생성
-      const message = `${date} ${event} 일정을 추가해줘`;
+      // 기간 일정 메시지 생성 (관련 공지사항 내용만 포함)
+      const message = `${startDate}부터 ${endDate}까지 ${event} 일정을 추가해줘. 상세내용: ${relevantNoticeContent}`;
       console.log('생성된 메시지:', message);
       
       if (message && onSendMessage) {
@@ -178,7 +238,43 @@ const ChatMessage = ({ message, isUser = false, onSendMessage, timestamp }) => {
         }, 1000); // 1초 후 트리거 (AI 응답 완료 대기)
       }
     } else {
-      console.log('매칭 실패 - 날짜:', dateMatch, '이벤트:', eventMatch);
+      // 단일 일정 처리 (시간 정보 포함)
+      const dateMatch = contentAfterColon.match(/(\d+월\s*\d+일(?:\([^)]*\))?)/);
+      const timeMatch = contentAfterColon.match(/(오전|오후)\s*(\d+시)/);
+      const singleEventMatch = contentAfterColon.match(/(예방접종|수학|경연|대회|축구|경기|관람|행사|시험|평가|대청소|체육대회|운동회|취침|수학여행|공사|바닥|스크린|중간고사|기말고사|고사|축제|공연|체험|먹거리|장터|부스|한마당|예방|접종|독감|보건)/);
+      
+      console.log('단일 날짜 매칭:', dateMatch);
+      console.log('시간 매칭:', timeMatch);
+      console.log('단일 이벤트 매칭:', singleEventMatch);
+      
+      if (dateMatch && singleEventMatch) {
+        const date = dateMatch[1];
+        const event = singleEventMatch[1];
+        
+        // 시간 정보가 있으면 포함 (관련 공지사항 내용만 포함)
+        let message;
+        if (timeMatch) {
+          const timePeriod = timeMatch[1]; // 오전/오후
+          const timeHour = timeMatch[2];   // 시
+          message = `${date} ${timePeriod} ${timeHour} ${event} 일정을 추가해줘. 상세내용: ${relevantNoticeContent}`;
+        } else {
+          message = `${date} ${event} 일정을 추가해줘. 상세내용: ${relevantNoticeContent}`;
+        }
+        
+        console.log('생성된 메시지:', message);
+        
+        if (message && onSendMessage) {
+          // 사용자 메시지 없이 바로 AI 응답만 처리
+          onSendMessage(message, true); // 두 번째 파라미터로 silent 모드 표시
+          
+          // 일정 추가 후 프론트엔드 업데이트 트리거
+          setTimeout(() => {
+            triggerEventRefresh();
+          }, 1000); // 1초 후 트리거 (AI 응답 완료 대기)
+        }
+      } else {
+        console.log('매칭 실패 - 기간:', periodMatch, '단일:', dateMatch, '시간:', timeMatch, '이벤트:', eventMatch || singleEventMatch);
+      }
     }
   };
 
