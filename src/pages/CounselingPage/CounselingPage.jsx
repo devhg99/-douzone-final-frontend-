@@ -31,8 +31,9 @@ const CounselingPage = () => {
         const studentRes = await fetch(`${API_BASE}/students`).then((r) =>
           r.json()
         );
-        const statsRes = await fetch(`${API_BASE}/stats`).then((r) => r.json());
 
+        const statsRes = await fetch(`${API_BASE}/stats`).then((r) => r.json());
+        
         setStudents(studentRes.data || []);
         setStats(statsRes.data || {});
       } catch (e) {
