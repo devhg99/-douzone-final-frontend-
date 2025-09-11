@@ -1,0 +1,76 @@
+name: Frontend CI/CD
+
+on:
+  push:
+    branches: [ "main" ]
+    paths: [ "**" ]  # 이 리포 전체
+
+env:
+  AWS_REGION: ap-northeast-2
+  AWS_ACCOUNT_ID: 373317459179
+  ECR_REPO: web/frontend
+  IMAGE_TAG: ${{ github.sha }}
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build_and_push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::373317459179:role/github-actions-ecr-pusher
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & Push (Docker)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          build-args: |
+            REACT_APP_API_BASE_URL=/v1
+          push: true
+          tags: |
+            ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${{ env.IMAGE_TAG }}
+            ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${{ github.sha }}
+
+  deploy:
+    needs: build_and_push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::373317459179:role/github-actions-ecr-pusher
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy via SSM (extract static files)
+        run: |
+          set -euxo pipefail
+          IMAGE="${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${{ env.IMAGE_TAG }}"
+          aws ssm send-command \
+            --document-name "AWS-RunShellScript" \
+            --targets "Key=tag:Role,Values=frontend" \
+            --parameters 'commands=[
+              "set -euxo pipefail; \
+               AWS_REGION='${{ env.AWS_REGION }}'; \
+               IMAGE=''$IMAGE''; \
+               aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin '${{ env.AWS_ACCOUNT_ID }}'.dkr.ecr.'${{ env.AWS_REGION }}'.amazonaws.com; \
+               docker pull \"$IMAGE\"; \
+               CID=$(docker create \"$IMAGE\"); \
+               mkdir -p /var/www/frontend; \
+               rm -rf /var/www/frontend/*; \
+               docker cp \"$CID\":/usr/share/nginx/html/. /var/www/html/; \
+               docker rm \"$CID\"; \
+               chown -R www-data:www-data /var/www/html || true; \
+               nginx -t && systemctl reload nginx || (systemctl restart nginx && nginx -t && systemctl reload nginx)"
+            ]' \
+            --comment "Deploy FE static" \
+            --region ${{ env.AWS_REGION }}

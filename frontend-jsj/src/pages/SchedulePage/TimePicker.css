@@ -1,0 +1,161 @@
+.time-picker {
+  position: relative;
+  width: 100%;
+}
+
+.time-picker-input {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background-color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 44px;
+}
+
+.time-picker-input:hover {
+  border-color: #2E86C1;
+}
+
+.time-picker-input.open {
+  border-color: #2E86C1;
+  box-shadow: 0 0 0 3px rgba(46, 134, 193, 0.1);
+}
+
+.time-picker-input.disabled {
+  background-color: #f9fafb;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.time-display {
+  color: #374151;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.time-picker-arrow {
+  color: #6b7280;
+  transition: transform 0.2s ease;
+}
+
+.time-picker-arrow.rotated {
+  transform: rotate(180deg);
+}
+
+.time-picker-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  margin-top: 4px;
+  padding: 16px;
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.period-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.period-btn {
+  flex: 1;
+  padding: 8px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: white;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.period-btn:hover {
+  border-color: #2E86C1;
+  color: #2E86C1;
+}
+
+.period-btn.active {
+  background-color: #2E86C1;
+  border-color: #2E86C1;
+  color: white;
+}
+
+.time-selectors {
+  display: flex;
+  gap: 12px;
+}
+
+.selector-group {
+  flex: 1;
+}
+
+.selector-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.time-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: white;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.time-select:hover {
+  border-color: #2E86C1;
+}
+
+.time-select:focus {
+  outline: none;
+  border-color: #2E86C1;
+  box-shadow: 0 0 0 3px rgba(46, 134, 193, 0.1);
+}
+
+/* 반응형 디자인 */
+@media (max-width: 640px) {
+  .time-picker-dropdown {
+    padding: 12px;
+  }
+  
+  .time-selectors {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .period-toggle {
+    margin-bottom: 12px;
+  }
+}
