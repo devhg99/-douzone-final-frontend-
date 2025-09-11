@@ -110,7 +110,7 @@ export default function LifeRecordPage() {
       // 1) 출결 요약
       let attendanceText = "-";
       try {
-        const a = await getJSON(apiUrl(`v1/attendance/student/${id}/summary`));
+        const a = await getJSON(apiUrl(`attendance/student/${id}/summary`));
         // 예: { student_id: 1, attendance_rate: "90%" }
         attendanceText =
           a?.attendance_rate
@@ -123,8 +123,8 @@ export default function LifeRecordPage() {
       // 2) 성적 요약
       let gradesText = "-";
       try {
-        // 권장: /v1/grades?student_id= 혹은 /v1/grades/student/{id}/summary 로 백엔드 보강
-        const g = await getJSON(apiUrl(`v1/grades?student_id=${id}`));
+        // 권장: grades?student_id= 혹은 grades/student/{id}/summary 로 백엔드 보강
+        const g = await getJSON(apiUrl(`grades?student_id=${id}`));
         // g 예시: [{subject_name:"국어", score:92}, ...] 또는 {grades:[...]}
         const arr = Array.isArray(g) ? g : (g?.grades || []);
         if (Array.isArray(arr) && arr.length) {
@@ -138,8 +138,8 @@ export default function LifeRecordPage() {
       // 3) 행동특성(생활기록부)
       let behaviorText = "-";
       try {
-        // 권장: /v1/school_report?student_id=&year=&semester= 로 필터 지원
-        const sr = await getJSON(apiUrl(`v1/school_report?student_id=${id}&year=${year}&semester=${semester}`));
+        // 권장: school_report?student_id=&year=&semester= 로 필터 지원
+        const sr = await getJSON(apiUrl(`school_report?student_id=${id}&year=${year}&semester=${semester}`));
         const item = Array.isArray(sr) ? sr[0] : sr;
         behaviorText =
           item?.behavior_summary ||
@@ -175,7 +175,7 @@ export default function LifeRecordPage() {
         "어조: 담임교사 기록체, 구체적 강점 1개 이상, 개선점 1개(있다면) 부드럽게.",
       ].join("\n");
 
-      const ai = await getJSON(apiUrl(`v1/ai_chatbot/`), {
+      const ai = await getJSON(apiUrl(`ai_chatbot/`), {
         method: "POST",
         body: JSON.stringify({ question: prompt }),
       });
@@ -202,7 +202,7 @@ export default function LifeRecordPage() {
         student_id: Number(studentId),
         teacher_feedback: comment, // 또는 behavior_summary 필드 사용 가능
       };
-      await getJSON(apiUrl(`v1/school_report/`), {
+      await getJSON(apiUrl(`school_report/`), {
         method: "POST",
         body: JSON.stringify(payload),
       });
@@ -216,7 +216,7 @@ export default function LifeRecordPage() {
   // --- 미리보기/인쇄 ---------------------------------------------
   const handlePreview = () => {
     if (!studentId) return;
-    window.open(apiUrl(`v1/pdf/report/${studentId}`), "_blank", "noopener,noreferrer");
+    window.open(apiUrl(`pdf/report/${studentId}`), "_blank", "noopener,noreferrer");
   };
   const handlePrint = handlePreview;
 
