@@ -20,7 +20,7 @@ export default function ClassMetrics({
           value: m.value,
         }))
       : [
-          { icon: "/src/assets/icons/dashboard/metric-class.svg", label: "학급", value: "6학년 2반" },
+          { icon: "/src/assets/icons/dashboard/metric-class.svg", label: "학급", value: "6학년 3반" },
           { icon: "/src/assets/icons/dashboard/metric-attendance-rate.svg", label: "출석률", value: "96.4%" },
           { icon: "/src/assets/icons/dashboard/metric-counsel-week.svg", label: "이번 주 상담", value: "5건" },
         ];

@@ -5,6 +5,9 @@ import Layout from "./components/common/Layout";
 import TeacherLoginPage from "./pages/TeacherLoginPage";
 import DashboardPage from "./pages/Dashboard/DashboardPage";
 import LifeRecordPage from "./pages/LifeRecord/LifeRecordPage"; // ✅ 추가
+import SchedulePage from "./pages/SchedulePage"; // ✅ 추가
+import ProblemWritingPage from "./pages/ProblemWritingPage/ProblemWritingPage"; // ✅ 추가
+import CounselingPage from "./pages/CounselingPage";
 
 function App() {
   return (
@@ -33,6 +36,15 @@ function App() {
           <Route path="/life-record" element={<LifeRecordPage />} />
           <Route path="/LifeRecordPage" element={<LifeRecordPage />} />
           <Route path="/lifeRecord" element={<LifeRecordPage />} />
+
+          {/* 일정 관리 */}
+          <Route path="/schedule" element={<SchedulePage />} />
+          
+          {/* 문제 출제 */}
+          <Route path="/problem-writing" element={<ProblemWritingPage />} />
+
+          {/* 상담 */}
+          <Route path="/counseling" element={<CounselingPage />} />
         </Route>
       </Routes>
     </Router>

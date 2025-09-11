@@ -1,5 +1,5 @@
 // src/pages/LifeRecord/LifeRecordPage.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 import StudentSelectSection from "./sections/StudentSelectSection";
 import SummarySection from "./sections/SummarySection";
@@ -9,7 +9,18 @@ import ActionBar from "./sections/ActionBar";
 /* =========================================================
    Env 호환 (Vite || CRA) + 안전한 URL 합치기
    ========================================================= */
-const API_BASE = process.env.REACT_APP_API_BASE_URL || "";
+/* eslint-disable no-undef */
+let VITE_ENV;
+try {
+  // Vite에서는 import.meta.env 사용 가능
+  VITE_ENV = import.meta.env;
+} catch (e) {
+  // CRA/Webpack 환경이라면 여기로 들어옴 (문제 없음)
+}
+/* eslint-enable no-undef */
+
+const API_BASE = process.env.REACT_APP_API_BASE_URL;
+
 const API_TIMEOUT = Number(process.env.REACT_APP_API_TIMEOUT) || 15000;
 
 // base와 path를 안전하게 합쳐서 //, /// 같은 중복 슬래시 제거
@@ -18,6 +29,7 @@ function apiUrl(path) {
   const p = String(path || "").replace(/^\/+/, "");
   return `${base}/${p}`;
 }
+
 
 /** 공통 fetch(JSON 전용, 실패해도 화면은 살려둠) */
 async function getJSON(url, opts = {}) {
@@ -57,36 +69,16 @@ export default function LifeRecordPage() {
   const [loadingSummary, setLoadingSummary] = useState(false);
   const actionsEnabled = comment.trim().length > 0;
 
-  // ✅ 학년/학기: 초기값은 기존 규칙(3~8월=1, 그 외=2)으로 세팅, 이후 /academic 응답으로 덮어쓰기
-  const [year, setYear] = useState(() => {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = now.getMonth() + 1;
-    return m <= 2 ? y - 1 : y;
-  });
-  const [semester, setSemester] = useState(() => {
-    const m = new Date().getMonth() + 1;
-    return m <= 2 ? 2 : m <= 8 ? 1 : 2;
-  });
+  // 학년/학기(임시 계산). 백엔드에 학기 API가 있으면 도착 후 덮어쓰기 권장.
+  const year = useMemo(() => new Date().getFullYear(), []);
+  const semester = useMemo(() => ((new Date().getMonth() + 1) <= 8 ? 1 : 2), []);
 
-  // --- 초기 로딩: 학기 + 학생 목록 --------------------------------
+  // --- 초기 로딩: 학생 목록 -------------------------------------
   useEffect(() => {
     (async () => {
-      // 1) 현재 학기
-      try {
-        const a = await getJSON(apiUrl(`v1/academic`));
-        const { year: y, semester: s } = a?.data ?? {};
-        if (y && s) {
-          setYear(y);
-          setSemester(s);
-        }
-      } catch (e) {
-        console.warn("학기 정보 조회 실패(폴백 유지):", e);
-      }
-
-      // 2) 학생 목록
       try {
         const data = await getJSON(apiUrl(`v1/students/`));
+        // data 예: [{id, name, ...}]
         const options = (data || []).map((s) => ({ label: s.name, value: String(s.id) }));
         setStudents(options);
       } catch (e) {
@@ -119,6 +111,7 @@ export default function LifeRecordPage() {
       let attendanceText = "-";
       try {
         const a = await getJSON(apiUrl(`v1/attendance/student/${id}/summary`));
+        // 예: { student_id: 1, attendance_rate: "90%" }
         attendanceText =
           a?.attendance_rate
             ? `출석률 ${a.attendance_rate}`
@@ -130,7 +123,9 @@ export default function LifeRecordPage() {
       // 2) 성적 요약
       let gradesText = "-";
       try {
+        // 권장: /v1/grades?student_id= 혹은 /v1/grades/student/{id}/summary 로 백엔드 보강
         const g = await getJSON(apiUrl(`v1/grades?student_id=${id}`));
+        // g 예시: [{subject_name:"국어", score:92}, ...] 또는 {grades:[...]}
         const arr = Array.isArray(g) ? g : (g?.grades || []);
         if (Array.isArray(arr) && arr.length) {
           const top3 = arr.slice(0, 3).map((r) => `${r.subject_name ?? r.subject ?? "과목"} ${r.score ?? "-"}`);
@@ -143,6 +138,7 @@ export default function LifeRecordPage() {
       // 3) 행동특성(생활기록부)
       let behaviorText = "-";
       try {
+        // 권장: /v1/school_report?student_id=&year=&semester= 로 필터 지원
         const sr = await getJSON(apiUrl(`v1/school_report?student_id=${id}&year=${year}&semester=${semester}`));
         const item = Array.isArray(sr) ? sr[0] : sr;
         behaviorText =
@@ -239,10 +235,13 @@ export default function LifeRecordPage() {
             />
           </div>
 
-                    <div className="col-span-12 lg:col-span-8">
+          <div className="col-span-12 lg:col-span-8">
             <SummarySection
-              data={summary}
-              loading={loadingSummary || !studentId}
+              data={
+                loadingSummary
+                  ? { attendance: "불러오는 중…", grades: "불러오는 중…", behavior: "불러오는 중…" }
+                  : summary
+              }
             />
           </div>
 
