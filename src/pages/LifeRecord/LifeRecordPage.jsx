@@ -61,16 +61,47 @@ async function getJSON(url, opts = {}) {
 /** 응답에서 흔한 껍데기 제거: {data:...} | {result:...} | {results:[...]} | 그 외 원본 */
 function unwrap(x) {
   if (x == null) return x;
-  if (Array.isArray(x)) return x;                    // 이미 배열
+  if (Array.isArray(x)) return x;
   if (Array.isArray(x?.data)) return x.data;
   if (Array.isArray(x?.results)) return x.results;
   if (Array.isArray(x?.items)) return x.items;
-  // 객체일 때 대표적인 키 하나만 들고 있는 경우 {data:{...}} -> {...}
   if (x && typeof x === "object") {
     if (x.data && typeof x.data === "object" && !Array.isArray(x.data)) return x.data;
     if (x.result && typeof x.result === "object") return x.result;
   }
   return x;
+}
+// 글자수 제한(열 너비에 맞춰 잘라서 … 처리)
+function clamp(text, max = 120) {
+  if (!text) return "-";
+  const s = String(text);
+  return s.length > max ? s.slice(0, max - 1) + "…" : s;
+}
+
+// 과목 ID → 이름 매핑 (서버 /subjects가 있으면 fetch해서 덮어씀)
+const FALLBACK_SUBJECT_MAP = {
+  1: "국어",
+  2: "수학",
+  3: "영어",
+  4: "사회",
+  5: "과학",
+};
+
+async function loadSubjectMap(apiUrl) {
+  try {
+    const raw = await getJSON(apiUrl(`subjects`));
+    const arr = unwrap(raw);
+    if (Array.isArray(arr) && arr.length) {
+      const m = {};
+      for (const it of arr) {
+        const id = Number(it?.id ?? it?.subject_id);
+        const name = it?.name ?? it?.subject_name;
+        if (Number.isFinite(id) && name) m[id] = name;
+      }
+      return Object.keys(m).length ? m : FALLBACK_SUBJECT_MAP;
+    }
+  } catch (_) {}
+  return FALLBACK_SUBJECT_MAP;
 }
 
 export default function LifeRecordPage() {
@@ -130,67 +161,110 @@ export default function LifeRecordPage() {
       return;
     }
 
-    setLoadingSummary(true);
+  setLoadingSummary(true);
+  try {
+    // 0) 과목 맵 준비 (/subjects 있으면 사용, 없으면 기본 맵)
+    const SUBJECT_MAP = await loadSubjectMap(apiUrl);
+
+    // 1) 출결 요약 -------------------------------------------------
+    let attendanceText = "-";
     try {
-      // 1) 출결 요약
-      let attendanceText = "-";
+      // 우선 개별 레코드 조회 (CSV: id,student_id,date,status,reason,special_note)
+      let list = [];
       try {
-        // 백엔드 응답 가정: { success:true, data:{ attendance_rate:"90%", ... } }
+        const aRaw = await getJSON(apiUrl(`attendance?student_id=${id}`));
+        const aUn = unwrap(aRaw);
+        list = Array.isArray(aUn) ? aUn : (Array.isArray(aUn?.records) ? aUn.records : []);
+      } catch {
+        // 대체: 요약 엔드포인트 (기존 코드 호환)
         const aRaw = await getJSON(apiUrl(`attendance/student/${id}/summary`));
         const a = unwrap(aRaw) || {};
-        attendanceText =
-          a?.attendance_rate
-            ? `출석률 ${a.attendance_rate}`
-            : (a?.summary || a?.message || "-");
-      } catch (e) {
-        console.warn("출결 요약 실패:", e);
+        if (a?.attendance_rate) attendanceText = `출석률 ${a.attendance_rate}`;
       }
 
-      // 2) 성적 요약
-      let gradesText = "-";
-      try {
-        const gRaw = await getJSON(apiUrl(`grades?student_id=${id}`));
-        const gUn = unwrap(gRaw) || [];
-        // 가능한 구조들: [ ... ] | {grades:[...]} | {data:[...]}
-        const arr = Array.isArray(gUn) ? gUn : (gUn.grades || []);
-        if (Array.isArray(arr) && arr.length) {
-          const top3 = arr.slice(0, 3).map((r) =>
-            `${r.subject_name ?? r.subject ?? "과목"} ${r.score ?? r.point ?? "-"}`
-          );
-          gradesText = top3.join(" / ");
-        }
-      } catch (e) {
-        console.warn("성적 요약 실패:", e);
-      }
-
-      // 3) 행동특성(생활기록부)
-      let behaviorText = "-";
-      try {
-        const srRaw = await getJSON(
-          apiUrl(`school_report?student_id=${id}&year=${year}&semester=${semester}`)
+      if (Array.isArray(list) && list.length) {
+        const counts = list.reduce(
+          (acc, r) => {
+            const s = String(r?.status ?? "").trim();
+            if (s === "출석") acc.present++;
+            else if (s === "지각") acc.late++;
+            else if (s === "조퇴") acc.early++;
+            else if (s === "결석") acc.absent++;
+            return acc;
+          },
+          { present: 0, late: 0, early: 0, absent: 0 }
         );
-        const un = unwrap(srRaw);
-        const item = Array.isArray(un) ? un[0] : un;   // 배열이면 첫 건 사용
-        behaviorText =
-          item?.behavior_summary ??
-          item?.teacher_feedback ??
-          item?.peer_relation ??
-          item?.comment ??
-          "-";
-      } catch (e) {
-        console.warn("행동특성 조회 실패:", e);
+
+        attendanceText =
+          `출석 ${counts.present}회, 지각 ${counts.late}회, 조퇴 ${counts.early}회` +
+          (counts.absent ? `, 결석 ${counts.absent}회` : "");
       }
-
-      setSummary({
-        attendance: attendanceText,
-        grades: gradesText,
-        behavior: behaviorText,
-      });
-    } finally {
-      setLoadingSummary(false);
+    } catch (e) {
+      console.warn("출결 요약 실패:", e);
     }
-  };
 
+    // 2) 성적 요약 -------------------------------------------------
+    // CSV: id,student_id,subject_id,term,average_score,grade_letter
+    let gradesText = "-";
+    try {
+      const gRaw = await getJSON(apiUrl(`grades?student_id=${id}`));
+      const gUn = unwrap(gRaw) || [];
+      const arr = Array.isArray(gUn) ? gUn : (Array.isArray(gUn?.grades) ? gUn.grades : []);
+
+      if (Array.isArray(arr) && arr.length) {
+        // term: "1학기" / "2학기" 가정. 표시 라벨은 중간/기말로 변환
+        const byTerm = { "1학기": {}, "2학기": {} };
+        for (const r of arr) {
+          const sid = Number(r?.subject_id);
+          const term = String(r?.term ?? "").trim();
+          const score = r?.average_score ?? r?.score ?? r?.point;
+          if (!Number.isFinite(sid) || !term) continue;
+          byTerm[term][sid] = score;
+        }
+
+        const subjectsOrder = [1, 2, 3, 4, 5]; // 국/수/영/사/과
+        const line = (label, map) =>
+          label + " " +
+          subjectsOrder
+            .map((sid) => `${SUBJECT_MAP[sid] ?? `과목${sid}`} (${map?.[sid] ?? "-"})`)
+            .join(" / ");
+
+        const lines = [];
+        if (Object.keys(byTerm["1학기"]).length) lines.push(line("중간고사", byTerm["1학기"]));
+        if (Object.keys(byTerm["2학기"]).length) lines.push(line("기말고사", byTerm["2학기"]));
+        if (lines.length) gradesText = lines.join("  |  ");
+      }
+    } catch (e) {
+      console.warn("성적 요약 실패:", e);
+    }
+
+    // 3) 행동특성(생활기록부) --------------------------------------
+    let behaviorText = "-";
+    try {
+      const srRaw = await getJSON(
+        apiUrl(`school_report?student_id=${id}&year=${year}&semester=${semester}`)
+      );
+      const un = unwrap(srRaw);
+      const item = Array.isArray(un) ? un[0] : un; // 배열이면 첫 건
+      const picked =
+        item?.behavior_summary ??
+        item?.teacher_feedback ??
+        item?.peer_relation ??
+        item?.comment;
+      behaviorText = clamp(picked, 120);
+    } catch (e) {
+      console.warn("행동특성 조회 실패:", e);
+    }
+
+    setSummary({
+      attendance: attendanceText || "-",
+      grades: gradesText || "-",
+      behavior: behaviorText || "-",
+    });
+  } finally {
+    setLoadingSummary(false);
+  }
+  };
   // --- 코멘트 생성 ----------------------------------------------
   const handleGenerate = async () => {
     if (!studentId) return;
