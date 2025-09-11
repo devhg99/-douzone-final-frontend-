@@ -58,6 +58,21 @@ async function getJSON(url, opts = {}) {
   }
 }
 
+/** 응답에서 흔한 껍데기 제거: {data:...} | {result:...} | {results:[...]} | 그 외 원본 */
+function unwrap(x) {
+  if (x == null) return x;
+  if (Array.isArray(x)) return x;                    // 이미 배열
+  if (Array.isArray(x?.data)) return x.data;
+  if (Array.isArray(x?.results)) return x.results;
+  if (Array.isArray(x?.items)) return x.items;
+  // 객체일 때 대표적인 키 하나만 들고 있는 경우 {data:{...}} -> {...}
+  if (x && typeof x === "object") {
+    if (x.data && typeof x.data === "object" && !Array.isArray(x.data)) return x.data;
+    if (x.result && typeof x.result === "object") return x.result;
+  }
+  return x;
+}
+
 export default function LifeRecordPage() {
   // --- 상태 ----------------------------------------------------
   const [students, setStudents] = useState([]);        // 드롭다운 옵션
@@ -78,13 +93,7 @@ export default function LifeRecordPage() {
     (async () => {
       try {
         const data = await getJSON(apiUrl(`students/`));
-        // data 예: [{id, name, ...}]
-        const list =
-          Array.isArray(data) ? data :
-          Array.isArray(data?.data) ? data.data :
-          Array.isArray(data?.results) ? data.results :
-          Array.isArray(data?.items) ? data.items :
-          [];
+        const list = unwrap(data) || [];
 
       // 3) 타입/스키마 보정: id, name이 없으면 최대한 유추
           const normalized = list.map((s) => ({
@@ -126,12 +135,13 @@ export default function LifeRecordPage() {
       // 1) 출결 요약
       let attendanceText = "-";
       try {
-        const a = await getJSON(apiUrl(`attendance/student/${id}/summary`));
-        // 예: { student_id: 1, attendance_rate: "90%" }
+        // 백엔드 응답 가정: { success:true, data:{ attendance_rate:"90%", ... } }
+        const aRaw = await getJSON(apiUrl(`attendance/student/${id}/summary`));
+        const a = unwrap(aRaw) || {};
         attendanceText =
           a?.attendance_rate
             ? `출석률 ${a.attendance_rate}`
-            : (a?.summary || "-");
+            : (a?.summary || a?.message || "-");
       } catch (e) {
         console.warn("출결 요약 실패:", e);
       }
@@ -139,12 +149,14 @@ export default function LifeRecordPage() {
       // 2) 성적 요약
       let gradesText = "-";
       try {
-        // 권장: grades?student_id= 혹은 grades/student/{id}/summary 로 백엔드 보강
-        const g = await getJSON(apiUrl(`grades?student_id=${id}`));
-        // g 예시: [{subject_name:"국어", score:92}, ...] 또는 {grades:[...]}
-        const arr = Array.isArray(g) ? g : (g?.grades || []);
+        const gRaw = await getJSON(apiUrl(`grades?student_id=${id}`));
+        const gUn = unwrap(gRaw) || [];
+        // 가능한 구조들: [ ... ] | {grades:[...]} | {data:[...]}
+        const arr = Array.isArray(gUn) ? gUn : (gUn.grades || []);
         if (Array.isArray(arr) && arr.length) {
-          const top3 = arr.slice(0, 3).map((r) => `${r.subject_name ?? r.subject ?? "과목"} ${r.score ?? "-"}`);
+          const top3 = arr.slice(0, 3).map((r) =>
+            `${r.subject_name ?? r.subject ?? "과목"} ${r.score ?? r.point ?? "-"}`
+          );
           gradesText = top3.join(" / ");
         }
       } catch (e) {
@@ -154,13 +166,16 @@ export default function LifeRecordPage() {
       // 3) 행동특성(생활기록부)
       let behaviorText = "-";
       try {
-        // 권장: school_report?student_id=&year=&semester= 로 필터 지원
-        const sr = await getJSON(apiUrl(`school_report?student_id=${id}&year=${year}&semester=${semester}`));
-        const item = Array.isArray(sr) ? sr[0] : sr;
+        const srRaw = await getJSON(
+          apiUrl(`school_report?student_id=${id}&year=${year}&semester=${semester}`)
+        );
+        const un = unwrap(srRaw);
+        const item = Array.isArray(un) ? un[0] : un;   // 배열이면 첫 건 사용
         behaviorText =
-          item?.behavior_summary ||
-          item?.teacher_feedback ||
-          item?.peer_relation ||
+          item?.behavior_summary ??
+          item?.teacher_feedback ??
+          item?.peer_relation ??
+          item?.comment ??
           "-";
       } catch (e) {
         console.warn("행동특성 조회 실패:", e);
