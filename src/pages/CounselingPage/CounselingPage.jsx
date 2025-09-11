@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import "./CounselingPage.css";
 
-const API_BASE = "http://localhost:8000/v1/counseling";
+const API_BASE = `${process.env.REACT_APP_API_BASE_URL}/counseling`;
+
 
 const CounselingPage = () => {
   const [students, setStudents] = useState([]);
@@ -31,8 +32,9 @@ const CounselingPage = () => {
         const studentRes = await fetch(`${API_BASE}/students`).then((r) =>
           r.json()
         );
-        const statsRes = await fetch(`${API_BASE}/stats`).then((r) => r.json());
 
+        const statsRes = await fetch(`${API_BASE}/stats`).then((r) => r.json());
+        
         setStudents(studentRes.data || []);
         setStats(statsRes.data || {});
       } catch (e) {

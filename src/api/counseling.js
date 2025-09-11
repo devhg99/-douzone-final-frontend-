@@ -1,7 +1,9 @@
 import axios from "axios";
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+
 const API = axios.create({
-  baseURL: "http://127.0.0.1:8000", // FastAPI 서버 주소
+  baseURL: API_BASE_URL, // ✅ 환경 변수 사용
 });
 
 // ✅ 상담 채팅 (RAG 기반)
