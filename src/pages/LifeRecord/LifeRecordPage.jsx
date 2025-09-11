@@ -91,7 +91,7 @@ export default function LifeRecordPage() {
         // label은 name/username/title 등 흔한 키에서 우선 추출
           label: s?.student_name ?? s?.name ?? s?.username ?? s?.title ?? String(s?.id ?? ''),
         // value는 문자열화된 id(없으면 label)
-          value: tring(s?.id ?? s?.value ?? s?.uuid ?? s?.pk ?? (s?.student_name ?? s?.name ?? '')),
+          value: String(s?.id ?? s?.value ?? s?.uuid ?? s?.pk ?? (s?.student_name ?? s?.name ?? '')),
         // 필요하면 원본도 보관
           _raw: s,
         }));
