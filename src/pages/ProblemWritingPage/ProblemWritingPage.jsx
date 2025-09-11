@@ -253,6 +253,12 @@ export default function ProblemWritingPage() {
           @page {
             size: A4;
             margin: 2cm;
+            @top-left { content: ""; }
+            @top-center { content: ""; }
+            @top-right { content: ""; }
+            @bottom-left { content: ""; }
+            @bottom-center { content: ""; }
+            @bottom-right { content: ""; }
           }
           body {
             font-family: 'Malgun Gothic', sans-serif;
