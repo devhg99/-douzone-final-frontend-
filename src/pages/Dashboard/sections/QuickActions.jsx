@@ -9,10 +9,10 @@ export default function QuickActions({ actions = [] }) {
   const data = actions.length
     ? actions
     : [
-        { icon: "/src/assets/icons/dashboard/action-counsel-note.svg", label: "상담일지 작성", to: "/counsel/new" },
-        { icon: "/src/assets/icons/dashboard/action-exam-maker.svg", label: "시험지 출제", to: "/exam/new" },
+        { icon: "/src/assets/icons/dashboard/action-counsel-note.svg", label: "상담일지 작성", to: "/Counseling" },
+        { icon: "/src/assets/icons/dashboard/action-exam-maker.svg", label: "시험지 출제", to: "/Problem-writing" },
         { icon: "/src/assets/icons/dashboard/action-letter.svg", label: "가정통신문 작성", to: "/letter/new" },
-        { icon: "/src/assets/icons/dashboard/action-life-record.svg", label: "생활기록부 작성", to: "/life-record/new" },
+        { icon: "/src/assets/icons/dashboard/action-life-record.svg", label: "생활기록부 작성", to: "/lifeRecord" },
       ];
 
   const handleClick = (a) => {

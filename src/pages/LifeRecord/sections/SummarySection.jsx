@@ -3,40 +3,45 @@ import React from "react";
 export default function SummarySection({ data, loading }) {
   // data가 없거나(미선택) 로딩 중이어도 표는 항상 렌더링
   // /school_report/full 응답 형태: { attendance:[], grades:[], reports:[] }
+// SummarySection.jsx
   const attendanceSummary = (() => {
-    if (loading) return "불러오는 중…";
+     if (loading) return "불러오는 중…";
     const arr = data?.attendance;
-    if (Array.isArray(arr) && arr.length) {
-      const absents = arr.filter(a => a.status === "결석").length;
-      return `${arr.length}일 기록 (결석 ${absents}회)`;
-    }
-    return "출결 데이터 없음";
-  })();
+    if (typeof arr === "string") return arr || "출결 데이터 없음";
+     if (Array.isArray(arr) && arr.length) {
+       const absents = arr.filter(a => a.status === "결석").length;
+       return `${arr.length}일 기록 (결석 ${absents}회)`;
+     }
+     return "출결 데이터 없음";
+   })();
 
   const gradesSummary = (() => {
-    if (loading) return "불러오는 중…";
+     if (loading) return "불러오는 중…";
     const arr = data?.grades;
-    if (Array.isArray(arr) && arr.length) {
-      return arr.slice(0, 3).map(g => `${g.subject ?? g.subject_name} ${g.score}`).join(" / ");
-    }
-    return "성적 데이터 없음";
-  })();
+    if (typeof arr === "string") return arr || "성적 데이터 없음";
+     if (Array.isArray(arr) && arr.length) {
+       return arr.slice(0, 3).map(g => `${g.subject ?? g.subject_name} ${g.score}`).join(" / ");
+     }
+     return "성적 데이터 없음";
+   })();
 
   const behaviorSummary = (() => {
-    if (loading) return "불러오는 중…";
+     if (loading) return "불러오는 중…";
     const reports = data?.reports;
-    if (Array.isArray(reports) && reports.length) {
-      const latest = reports[reports.length - 1];
-      const merged = [
-        latest.behavior_summary,
-        latest.peer_relation,
-        latest.career_aspiration,
-        latest.teacher_feedback,
-      ].filter(Boolean).join(" / ");
-      return merged || "행동특성 데이터 없음";
-    }
-    return "행동특성 데이터 없음";
-  })();
+    if (typeof data?.behavior === "string") return data.behavior || "행동특성 데이터 없음";
+     if (Array.isArray(reports) && reports.length) {
+       const latest = reports[reports.length - 1];
+       const merged = [
+         latest.behavior_summary,
+         latest.peer_relation,
+         latest.career_aspiration,
+         latest.teacher_feedback,
+       ].filter(Boolean).join(" / ");
+       return merged || "행동특성 데이터 없음";
+     }
+     return "행동특성 데이터 없음";
+   })();
+
 
   const rows = [
     ["출결", attendanceSummary],
