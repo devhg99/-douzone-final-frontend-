@@ -78,7 +78,7 @@ const Sidebar = () => {
   const menuItems = [
     {
       id: "dashboard",
-      label: "대시보드",
+      label: "홈",
       icon: (
         <svg
           width="10"
