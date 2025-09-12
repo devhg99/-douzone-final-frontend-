@@ -88,6 +88,7 @@ const Sidebar = () => {
 
   const handleMenuClick = (menuId) => {
     setActiveMenu(menuId);
+    setActiveSub(null);
     const to = PATHS[menuId];
     if (to) navigate(to);
   };
@@ -101,6 +102,19 @@ const Sidebar = () => {
   const reportsSubItems = [
     { id: "LifeRecord", label: "생활기록부작성", icon: <Submenu2Icon /> },
   ];
+
+  const MAIN_TO_SUB = {
+    grades: ["problem-writing"],
+    reports: ["LifeRecord"],
+  };
+
+  const isMenuActive = (id) => {
+    if (activeMenu !== id) return false;
+    const subs = MAIN_TO_SUB[id];
+    // 자식이 활성화돼 있으면 부모는 비활성 처리
+    if (subs && activeSub && subs.includes(activeSub)) return false;
+    return true;
+  };
 
   const menuItems = [
     {
@@ -518,7 +532,7 @@ const Sidebar = () => {
           <React.Fragment key={item.id}>
             <MenuItem
               item={item}
-              isActive={activeMenu === item.id}
+              isActive={isMenuActive(item.id)}
               onClick={handleMenuClick}
             />
             {/* 성적평가 바로 다음에 문제작성 서브메뉴 */}
