@@ -9,19 +9,19 @@ export const PATHS = {
   progress: "/progress",
   reports: "/reports",
   counseling: "/counseling",
-  lifeGuidance: "/lifeGuidance",
+  LifeGuidance: "/LifeGuidance",
   studentInfo: "/studentInfo",
   homeLetter: "/homeLetter",
   notice: "/notice",
   staffCollaboration: "/staffCollaboration",
-  classSchedule: "/classSchedule",
+  Schedule: "/Schedule",
   timetable: "/timetable",
   events: "/events",
   documents: "/documents",
   facility: "/facility",
   survey: "/survey",
   "problem-writing": "/problem-writing",
-  lifeRecord: "/lifeRecord",
+  LifeRecord: "/LifeRecord",
 };
 
 // 서브메뉴 아이콘 컴포넌트들
@@ -475,7 +475,7 @@ const Sidebar = () => {
     }
     // 2) 서브 메뉴 동기화
     if (path.startsWith(PATHS["problem-writing"])) setActiveSub("problem-writing");
-    else if (path.startsWith(PATHS["lifeRecord"])) setActiveSub("lifeRecord");
+    else if (path.startsWith(PATHS["LifeRecord"])) setActiveSub("LifeRecord");
     else setActiveSub(null);
   }, [location.pathname]);
 
@@ -598,8 +598,7 @@ const Sidebar = () => {
         <button
           className="flex w-full h-12 px-4 justify-center items-center gap-2.5 bg-red-600 hover:bg-red-700 transition-colors"
           onClick={() => {
-            // TODO: 토큰/세션 정리 로직 추가 가능
-            navigate("/login"); // [ADD] 로그아웃 후 이동
+            navigate("/"); // [ADD] 로그아웃 후 이동
           }}
         >          <span className="text-white text-sm font-bold leading-normal tracking-wide text-center">
             로그아웃
