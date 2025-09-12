@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react"; 
-import { NavLink, useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 /** 경로 매핑 */
 export const PATHS = { 
@@ -99,7 +99,7 @@ const Sidebar = () => {
   ];
 
   const reportsSubItems = [
-    { id: "lifeRecord", label: "생활기록부작성", icon: <Submenu2Icon /> },
+    { id: "LifeRecord", label: "생활기록부작성", icon: <Submenu2Icon /> },
   ];
 
   const menuItems = [
@@ -246,7 +246,7 @@ const Sidebar = () => {
       ),
     },
     {
-      id: "lifeGuidance",
+      id: "LifeGuidance",
       label: "생활지도",
       icon: (
         <svg
@@ -347,7 +347,7 @@ const Sidebar = () => {
 
   const scheduleMenuItems = [
     {
-      id: "classSchedule",
+      id: "Schedule",
       label: "학급 일정",
       icon: (
         <svg
@@ -466,17 +466,28 @@ const Sidebar = () => {
 
   useEffect(() => {
     const path = location.pathname || "/";
-    // 1) 메인 메뉴 동기화
+
+    // 1) 서브 라우트 우선 처리: 하이라이트를 상위 메뉴로 매핑
+    if (path.startsWith(PATHS["problem-writing"])) {
+      setActiveMenu("grades");
+      setActiveSub("problem-writing");
+      return;
+    }
+    if (path.startsWith(PATHS["LifeRecord"])) {
+      setActiveMenu("reports");
+      setActiveSub("LifeRecord");
+      return;
+    }
+
+    // 2) 그 외: PATHS에서 일치하는 키를 활성화
     const foundMain = Object.entries(PATHS).find(([, p]) => path.startsWith(p));
     if (foundMain) {
       const [key] = foundMain;
-      // 서브가 아닌 최상위 키면 activeMenu로 처리
       setActiveMenu(key);
+    } else {
+      setActiveMenu("dashboard");
     }
-    // 2) 서브 메뉴 동기화
-    if (path.startsWith(PATHS["problem-writing"])) setActiveSub("problem-writing");
-    else if (path.startsWith(PATHS["LifeRecord"])) setActiveSub("LifeRecord");
-    else setActiveSub(null);
+    setActiveSub(null);
   }, [location.pathname]);
 
   return (
