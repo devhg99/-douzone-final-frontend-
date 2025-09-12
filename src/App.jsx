@@ -33,9 +33,7 @@ function App() {
           <Route path="/survey" element={<DashboardPage />} />
 
           {/* 생활기록부 (여러 경로 호환) */}
-          <Route path="/life-record" element={<LifeRecordPage />} />
           <Route path="/LifeRecordPage" element={<LifeRecordPage />} />
-          <Route path="/lifeRecord" element={<LifeRecordPage />} />
 
           {/* 일정 관리 */}
           <Route path="/schedule" element={<SchedulePage />} />

@@ -1,5 +1,28 @@
-import { useState } from "react";
 import React from "react";
+import { NavLink, useNavigate } from "react-router-dom";
+
+/** 경로 매핑 */
+export const PATHS = { 
+  dashboard: "/dashboard",
+  attendance: "/attendance",
+  grades: "/grades",
+  progress: "/progress",
+  reports: "/reports",
+  counseling: "/counseling",
+  lifeGuidance: "/lifeGuidance",
+  studentInfo: "/studentInfo",
+  homeLetter: "/homeLetter",
+  notice: "/notice",
+  staffCollaboration: "/staffCollaboration",
+  classSchedule: "/classSchedule",
+  timetable: "/timetable",
+  events: "/events",
+  documents: "/documents",
+  facility: "/facility",
+  survey: "/survey",
+  "problem-writing": "/problem-writing",
+  lifeRecord: "/lifeRecord",
+};
 
 // 서브메뉴 아이콘 컴포넌트들
 const Submenu1Icon = () => (
@@ -59,10 +82,14 @@ const CategoryHeader = ({ title }) => (
 );
 
 const Sidebar = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [activeMenu, setActiveMenu] = useState("dashboard");
 
   const handleMenuClick = (menuId) => {
     setActiveMenu(menuId);
+    const to = PATHS[menuId];
+    if (to) navigate(to);
   };
 
   const [activeSub, setActiveSub] = useState(null);
@@ -72,7 +99,7 @@ const Sidebar = () => {
   ];
 
   const reportsSubItems = [
-    { id: "life-record", label: "생활기록부작성", icon: <Submenu2Icon /> },
+    { id: "lifeRecord", label: "생활기록부작성", icon: <Submenu2Icon /> },
   ];
 
   const menuItems = [
@@ -437,6 +464,21 @@ const Sidebar = () => {
     },
   ];
 
+  useEffect(() => {
+    const path = location.pathname || "/";
+    // 1) 메인 메뉴 동기화
+    const foundMain = Object.entries(PATHS).find(([, p]) => path.startsWith(p));
+    if (foundMain) {
+      const [key] = foundMain;
+      // 서브가 아닌 최상위 키면 activeMenu로 처리
+      setActiveMenu(key);
+    }
+    // 2) 서브 메뉴 동기화
+    if (path.startsWith(PATHS["problem-writing"])) setActiveSub("problem-writing");
+    else if (path.startsWith(PATHS["lifeRecord"])) setActiveSub("lifeRecord");
+    else setActiveSub(null);
+  }, [location.pathname]);
+
   return (
     <aside className="flex flex-col w-[250px] bg-slate-800 overflow-y-auto scrollbar-hide">
       <div className="flex flex-col justify-center items-center min-h-[94px] px-4 py-3 gap-1.5 bg-slate-800">
@@ -476,7 +518,11 @@ const Sidebar = () => {
                     key={sub.id}
                     item={sub}
                     isActive={activeSub === sub.id}
-                    onClick={setActiveSub}
+                    onClick={(id) => {
+                      setActiveSub(id);
+                      const to = PATHS[id];
+                      if (to) navigate(to);
+                    }}
                   />
                 ))}
               </div>
@@ -489,7 +535,11 @@ const Sidebar = () => {
                     key={sub.id}
                     item={sub}
                     isActive={activeSub === sub.id}
-                    onClick={setActiveSub}
+                    onClick={(id) => {
+                      setActiveSub(id);
+                      const to = PATHS[id];
+                      if (to) navigate(to);
+                    }}
                   />
                 ))}
               </div>
@@ -545,8 +595,13 @@ const Sidebar = () => {
           />
         ))}
 
-        <button className="flex w-full h-12 px-4 justify-center items-center gap-2.5 bg-red-600 hover:bg-red-700 transition-colors">
-          <span className="text-white text-sm font-bold leading-normal tracking-wide text-center">
+        <button
+          className="flex w-full h-12 px-4 justify-center items-center gap-2.5 bg-red-600 hover:bg-red-700 transition-colors"
+          onClick={() => {
+            // TODO: 토큰/세션 정리 로직 추가 가능
+            navigate("/login"); // [ADD] 로그아웃 후 이동
+          }}
+        >          <span className="text-white text-sm font-bold leading-normal tracking-wide text-center">
             로그아웃
           </span>
         </button>
