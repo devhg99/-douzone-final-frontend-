@@ -25,7 +25,7 @@ const Header = () => {
     '/documents': '행정 서류',
     '/facility': '교실 환경',
     '/survey': '조사·설문',
-    '/liferecord': '생활기록부' // ✅ 생활기록부
+    '/LifeRecord': '생활기록부'
   };
 
   // 현재 경로
