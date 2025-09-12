@@ -83,8 +83,8 @@ const FALLBACK_SUBJECT_MAP = {
   1: "국어",
   2: "수학",
   3: "영어",
-  4: "사회",
-  5: "과학",
+  4: "과학",
+  5: "사회",
 };
 
 async function loadSubjectMap(apiUrl) {
@@ -215,7 +215,7 @@ export default function LifeRecordPage() {
     // CSV: id,student_id,subject_id,term,average_score,grade_letter
     let gradesText = "-";
     try {
-      const gRaw = await getJSON(apiUrl(`grades?student_id=${id}`));
+      const gRaw = await getJSON(apiUrl(`grades/student/${id}`));
       const gUn = unwrap(gRaw) || [];
       const arr = Array.isArray(gUn) ? gUn : (Array.isArray(gUn?.grades) ? gUn.grades : []);
 
@@ -250,8 +250,9 @@ export default function LifeRecordPage() {
     let behaviorText = "-";
     try {
       const srRaw = await getJSON(
-        apiUrl(`school_report?student_id=${id}&year=${year}&semester=${semester}`)
+        apiUrl(`school_report/student/${id}`)
       );
+
       const un = unwrap(srRaw);
       const item = Array.isArray(un) ? un[0] : un; // 배열이면 첫 건
       const picked =
