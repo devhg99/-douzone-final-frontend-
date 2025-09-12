@@ -1,5 +1,5 @@
-import React from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react"; 
+import { NavLink, useNavigate, useLocation } from "react-router-dom";
 
 /** 경로 매핑 */
 export const PATHS = { 
