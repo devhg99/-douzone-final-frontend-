@@ -295,7 +295,7 @@ export default function LifeRecordPage() {
         "어조: 담임교사 기록체, 구체적 강점 1개 이상, 개선점 1개(있다면) 부드럽게.",
       ].join("\n");
 
-      const ai = await getJSON(apiUrl(`ai_chatbot/`), {
+      const ai = await getJSON(apiUrl(`ai/chat/`), {
         method: "POST",
         body: JSON.stringify({ question: prompt }),
       });
