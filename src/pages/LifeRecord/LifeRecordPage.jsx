@@ -215,16 +215,24 @@ export default function LifeRecordPage() {
     // CSV: id,student_id,subject_id,term,average_score,grade_letter
     let gradesText = "-";
     try {
-      const gRaw = await getJSON(apiUrl(`grades/student/${id}`));
+      const gRaw = await getJSON(apiUrl(`grades?student_id=${encodeURIComponent(id)}`));
       const gUn = unwrap(gRaw) || [];
       const arr = Array.isArray(gUn) ? gUn : (Array.isArray(gUn?.grades) ? gUn.grades : []);
 
       if (Array.isArray(arr) && arr.length) {
-        // term: "1학기" / "2학기" 가정. 표시 라벨은 중간/기말로 변환
-        const byTerm = { "1학기": {}, "2학기": {} };
+        // term 값이 "1학기/2학기" 또는 "중간/기말" 또는 숫자일 수 있음 → 라벨 정규화
+        const normTerm = (t) => {
+          const s = String(t ?? "").replace(/\s+/g, "");
+          if (/^1학기|중간|mid(dle)?$/i.test(s)) return "중간고사";
+          if (/^2학기|기말|final$/i.test(s)) return "기말고사";
+          if (s === "1") return "중간고사";
+          if (s === "2") return "기말고사";
+          return "기말고사"; // 기본
+        };
+        const byTerm = { "중간고사": {}, "기말고사": {} };
         for (const r of arr) {
           const sid = Number(r?.subject_id);
-          const term = String(r?.term ?? "").trim();
+          const term = normTerm(r?.term);
           const score = r?.average_score ?? r?.score ?? r?.point;
           if (!Number.isFinite(sid) || !term) continue;
           byTerm[term][sid] = score;
@@ -238,8 +246,8 @@ export default function LifeRecordPage() {
             .join(" / ");
 
         const lines = [];
-        if (Object.keys(byTerm["1학기"]).length) lines.push(line("중간고사", byTerm["1학기"]));
-        if (Object.keys(byTerm["2학기"]).length) lines.push(line("기말고사", byTerm["2학기"]));
+        if (Object.keys(byTerm["중간고사"]).length) lines.push(line("중간고사", byTerm["중간고사"]));
+        if (Object.keys(byTerm["기말고사"]).length) lines.push(line("기말고사", byTerm["기말고사"]));
         if (lines.length) gradesText = lines.join("  |  ");
       }
     } catch (e) {
@@ -249,9 +257,7 @@ export default function LifeRecordPage() {
     // 3) 행동특성(생활기록부) --------------------------------------
     let behaviorText = "-";
     try {
-      const srRaw = await getJSON(
-        apiUrl(`school_report/student/${id}`)
-      );
+      const srRaw = await getJSON(apiUrl(`school_report?student_id=${encodeURIComponent(id)}`));
 
       const un = unwrap(srRaw);
       const item = Array.isArray(un) ? un[0] : un; // 배열이면 첫 건
