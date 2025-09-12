@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
 import { sendChatMessage } from '../../api/chatbot';
-import { sendCounselingMessage } from '../../api/chatbot_counseling';
+import { sendCounselingMessage, setUserContext, getUserContext, sendCounselingMessageWithContext, clearUserContext } from '../../api/chatbot_counseling';
 import useUIStore from '../../store/useUIStore';
 
 const ChatbotSidebar = ({ isOpen, onClose }) => {
@@ -29,6 +29,23 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef(null);
   
+  // 사용자 컨텍스트 관련 상태
+  const [userContextSet, setUserContextSet] = useState(false);
+  const [showUserSetup, setShowUserSetup] = useState(false);
+  const [tempUserInfo, setTempUserInfo] = useState({
+    student_name: '',
+    worry_tag_filter: ''
+  });
+
+  // 상담 탭의 초기 메시지를 동적으로 생성하는 함수
+  const getInitialConsultationMessage = useCallback(() => {
+    const context = getUserContext();
+    if (context.student_name && context.worry_tag_filter) {
+      return `상담 업무를 도와드리겠습니다! 현재 설정: ${context.student_name}님, 태그: ${context.worry_tag_filter}\n\n학생 상담, 학부모 상담, 상담일지 작성 등 무엇이든 도와드릴 수 있습니다.`;
+    }
+    return "상담 업무를 도와드리겠습니다! 학생 상담, 학부모 상담, 상담일지 작성 등 무엇이든 도와드릴 수 있습니다.\n\n더 정확한 상담을 위해 학생 정보를 설정해보세요.";
+  }, [userContextSet]);
+  
   // 각 탭별로 메시지를 별도 관리
   const [tabMessages, setTabMessages] = useState({
     attendance: [{
@@ -39,7 +56,7 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
     }],
     consultation: [{
       id: 1,
-      message: "상담 업무를 도와드리겠습니다! 학생 상담, 학부모 상담, 상담일지 작성 등 무엇이든 도와드릴 수 있습니다.",
+      message: "상담 업무를 도와드리겠습니다! 학생 상담, 학부모 상담, 상담일지 작성 등 무엇이든 도와드릴 수 있습니다.\n\n더 정확한 상담을 위해 학생 정보를 설정해보세요.",
       isUser: false,
       timestamp: new Date()
     }],
@@ -89,6 +106,81 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
   useEffect(() => {
     setActiveTab(getInitialTab());
   }, [getInitialTab]);
+
+  // 사용자 컨텍스트 설정 확인 함수
+  const checkUserContext = useCallback(() => {
+    const context = getUserContext();
+    return context.student_name && context.worry_tag_filter;
+  }, []);
+
+  // 사용자 정보 설정 모달/폼 토글
+  const toggleUserSetup = () => {
+    const context = getUserContext();
+    setTempUserInfo({
+      student_name: context.student_name || '',
+      worry_tag_filter: context.worry_tag_filter || ''
+    });
+    setShowUserSetup(!showUserSetup);
+  };
+
+  // 사용자 정보 저장
+  const saveUserContext = () => {
+    if (tempUserInfo.student_name.trim() && tempUserInfo.worry_tag_filter.trim()) {
+      setUserContext(tempUserInfo.student_name.trim(), tempUserInfo.worry_tag_filter.trim());
+      setUserContextSet(!userContextSet); // 강제로 리렌더링 트리거
+      setShowUserSetup(false);
+      
+      // 성공 메시지 추가
+      const successMsg = {
+        id: Date.now(),
+        message: `사용자 정보가 설정되었습니다.\n학생명: ${tempUserInfo.student_name}\n상담 태그: ${tempUserInfo.worry_tag_filter}`,
+        isUser: false,
+        timestamp: new Date()
+      };
+      
+      setTabMessages(prev => ({
+        ...prev,
+        consultation: [...(prev.consultation || []), successMsg]
+      }));
+
+      // 초기 메시지도 업데이트
+      setTimeout(() => {
+        setTabMessages(prev => ({
+          ...prev,
+          consultation: [
+            {
+              id: 1,
+              message: getInitialConsultationMessage(),
+              isUser: false,
+              timestamp: new Date()
+            },
+            ...prev.consultation.slice(1) // 기존 메시지들 유지 (첫 번째 제외)
+          ]
+        }));
+      }, 100);
+    }
+  };
+
+  // 상담 탭으로 전환될 때 초기 메시지 업데이트
+  useEffect(() => {
+    if (activeTab === 'consultation') {
+      setTabMessages(prev => {
+        const existingMessages = prev.consultation || [];
+        const updatedFirstMessage = {
+          id: 1,
+          message: getInitialConsultationMessage(),
+          isUser: false,
+          timestamp: new Date()
+        };
+        
+        // 첫 번째 메시지만 업데이트, 나머지는 유지
+        return {
+          ...prev,
+          consultation: [updatedFirstMessage, ...existingMessages.slice(1)]
+        };
+      });
+    }
+  }, [activeTab, userContextSet, getInitialConsultationMessage]);
 
   // 드래그 리사이징 기능
   const handleMouseDown = (e) => {
@@ -164,7 +256,18 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
       // consultation 탭인 경우 chatbot_counseling.js의 sendCounselingMessage 사용
       if (activeTab === 'consultation') {
         console.log('상담 챗봇 API 호출 시작:', userMessage);
-        response = await sendCounselingMessage(userMessage);
+        
+        // 사용자 컨텍스트가 설정되어 있는지 확인
+        const hasContext = checkUserContext();
+        
+        if (hasContext) {
+          // 컨텍스트가 있으면 간편한 방식 사용
+          response = await sendCounselingMessageWithContext(userMessage);
+        } else {
+          // 컨텍스트가 없으면 기본값으로 API 호출
+          response = await sendCounselingMessage(userMessage);
+        }
+        
         console.log('상담 챗봇 API 응답:', response);
       } else {
         // 다른 탭들은 기존의 sendChatMessage 사용
@@ -317,7 +420,7 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
                 </button>
                 <button
                   onClick={() => {
-                    console.log('상담 탭 클릭됨'); // console.log를 이 안으로 옮겼습니다.
+                    console.log('상담 탭 클릭됨');
                     setActiveTab('consultation');
                   }}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -327,7 +430,7 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
                   }`}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                   </svg>
                   상담
                 </button>
@@ -408,32 +511,50 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
         <div className="flex-1 flex flex-col">
           {/* Header */}
           <div className="flex-shrink-0 flex items-center justify-between p-6 bg-white border-b border-slate-200">
-            <div>
-               <h2 className="text-xl font-bold text-gray-900">
-                 {activeTab === 'attendance' ? '출결 도우미' : 
-                  activeTab === 'consultation' ? '상담 도우미' : 
-                  activeTab === 'schedule' ? '일정 도우미' : 
-                  activeTab === 'exam' ? '시험지 도우미' : 
-                  activeTab === 'notice' ? '공지사항 도우미' : '성적 도우미'}
-               </h2>
-               <p className="text-sm text-gray-600 mt-1">
-                 {activeTab === 'attendance'
-                   ? '출석 현황 확인, 결석자 추출, 출결 통계 생성, 출결 관리'
-                   : activeTab === 'consultation'
-                   ? '학생 상담, 학부모 상담, 상담일지 작성'
-                   : activeTab === 'schedule'
-                   ? '오늘 일정 확인, 일정 추가, 수정, 삭제, 일정 관리'
-                   : activeTab === 'exam'
-                   ? '문제지 생성, 시험지 관리, 문제 수정, 정답 확인, 시험지 관련 업무'
-                   : activeTab === 'notice'
-                   ? '공지사항 조회, 공지사항 작성, 공지사항 수정, 공지사항 관리'
-                   : '성적 입력, 성적 분석, 성적 통계 생성, 성적 리포트 작성, 성적 관리'
-                 }
-               </p>
+            <div className="flex-1">
+               <div className="flex items-center justify-between">
+                 <div>
+                   <h2 className="text-xl font-bold text-gray-900">
+                     {activeTab === 'attendance' ? '출결 도우미' : 
+                      activeTab === 'consultation' ? '상담 도우미' : 
+                      activeTab === 'schedule' ? '일정 도우미' : 
+                      activeTab === 'exam' ? '시험지 도우미' : 
+                      activeTab === 'notice' ? '공지사항 도우미' : '성적 도우미'}
+                   </h2>
+                   <p className="text-sm text-gray-600 mt-1">
+                     {activeTab === 'attendance'
+                       ? '출석 현황 확인, 결석자 추출, 출결 통계 생성, 출결 관리'
+                       : activeTab === 'consultation'
+                       ? '학생 상담, 학부모 상담, 상담일지 작성'
+                       : activeTab === 'schedule'
+                       ? '오늘 일정 확인, 일정 추가, 수정, 삭제, 일정 관리'
+                       : activeTab === 'exam'
+                       ? '문제지 생성, 시험지 관리, 문제 수정, 정답 확인, 시험지 관련 업무'
+                       : activeTab === 'notice'
+                       ? '공지사항 조회, 공지사항 작성, 공지사항 수정, 공지사항 관리'
+                       : '성적 입력, 성적 분석, 성적 통계 생성, 성적 리포트 작성, 성적 관리'
+                     }
+                   </p>
+                 </div>
+                 
+                 {/* 상담 탭에서만 사용자 설정 버튼 표시 */}
+                 {activeTab === 'consultation' && (
+                   <button
+                     onClick={toggleUserSetup}
+                     className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-2"
+                   >
+                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                     </svg>
+                     {checkUserContext() ? '사용자 정보 변경' : '사용자 정보 설정'}
+                   </button>
+                 )}
+               </div>
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors ml-4"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -441,6 +562,62 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
             </button>
           </div>
 
+          {/* 사용자 정보 설정 모달/폼 */}
+          {activeTab === 'consultation' && showUserSetup && (
+            <div className="flex-shrink-0 bg-blue-50 border-b border-blue-200 p-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-semibold text-blue-900">상담 대상자 정보 설정</h4>
+                  {checkUserContext() && (
+                    <div className="text-sm text-blue-700 bg-blue-100 px-2 py-1 rounded">
+                      현재 설정됨
+                    </div>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">학생명</label>
+                    <input
+                      type="text"
+                      value={tempUserInfo.student_name}
+                      onChange={(e) => setTempUserInfo(prev => ({ ...prev, student_name: e.target.value }))}
+                      placeholder="예: 김철수"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">상담 태그</label>
+                    <input
+                      type="text"
+                      value={tempUserInfo.worry_tag_filter}
+                      onChange={(e) => setTempUserInfo(prev => ({ ...prev, worry_tag_filter: e.target.value }))}
+                      placeholder="예: 용기, 따돌림, 우울"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
+                  </div>
+                </div>
+                <div className="text-xs text-gray-500">
+                  <p>• 학생명: 상담 대상 학생의 이름을 입력하세요</p>
+                  <p>• 상담 태그: 쉼표로 구분하여 여러 태그 입력 가능 (예: 용기, 따돌림, 우울)</p>
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <button
+                    onClick={() => setShowUserSetup(false)}
+                    className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+                  >
+                    취소
+                  </button>
+                  <button
+                    onClick={saveUserContext}
+                    disabled={!tempUserInfo.student_name.trim() || !tempUserInfo.worry_tag_filter.trim()}
+                    className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                  >
+                    저장
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Messages Area */}
           <div className="flex-1 overflow-y-auto bg-slate-50">
