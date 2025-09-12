@@ -177,17 +177,16 @@ export default function LifeRecordPage() {
     // 1) 출결 요약 -------------------------------------------------
     let attendanceText = "-";
     try {
-      // 우선 개별 레코드 조회 (CSV: id,student_id,date,status,reason,special_note)
       let list = [];
       try {
-        const aRaw = await getJSON(apiUrl(`attendance?student_id=${id}`));
-        const aUn = unwrap(aRaw);
-
-      } catch {
-        // 대체: 요약 엔드포인트 (기존 코드 호환)
-        const aRaw = await getJSON(apiUrl(`attendance/student/${id}/summary`));
+        const aRaw = await getJSON(apiUrl(`attendance?student_id=${encodeURIComponent(id)}`));
+        const aUn = unwrap(aRaw);   // ✅ 여기서 aUn 선언
         const all = Array.isArray(aUn) ? aUn : (Array.isArray(aUn?.records) ? aUn.records : []);
-        const list = all.filter(r => String(r.student_id) === String(id)); // 🔧 해당 학생만        if (a?.attendance_rate) attendanceText = `출석률 ${a.attendance_rate}`;
+        list = all.filter((r) => String(r.student_id) === String(id)); // 해당 학생만
+      } catch {
+        const aRaw = await getJSON(apiUrl(`attendance/student/${id}/summary`));
+        const a = unwrap(aRaw) || {};
+        if (a?.attendance_rate) attendanceText = `출석률 ${a.attendance_rate}`;
       }
 
       if (Array.isArray(list) && list.length) {
