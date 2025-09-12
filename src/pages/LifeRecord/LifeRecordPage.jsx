@@ -182,12 +182,12 @@ export default function LifeRecordPage() {
       try {
         const aRaw = await getJSON(apiUrl(`attendance?student_id=${id}`));
         const aUn = unwrap(aRaw);
-        list = Array.isArray(aUn) ? aUn : (Array.isArray(aUn?.records) ? aUn.records : []);
+
       } catch {
         // 대체: 요약 엔드포인트 (기존 코드 호환)
         const aRaw = await getJSON(apiUrl(`attendance/student/${id}/summary`));
-        const a = unwrap(aRaw) || {};
-        if (a?.attendance_rate) attendanceText = `출석률 ${a.attendance_rate}`;
+        const all = Array.isArray(aUn) ? aUn : (Array.isArray(aUn?.records) ? aUn.records : []);
+        const list = all.filter(r => String(r.student_id) === String(id)); // 🔧 해당 학생만        if (a?.attendance_rate) attendanceText = `출석률 ${a.attendance_rate}`;
       }
 
       if (Array.isArray(list) && list.length) {
@@ -219,8 +219,8 @@ export default function LifeRecordPage() {
       const gUn = unwrap(gRaw) || [];
       const arr = Array.isArray(gUn) ? gUn : (Array.isArray(gUn?.grades) ? gUn.grades : []);
 
-      if (Array.isArray(arr) && arr.length) {
-        // term 값이 "1학기/2학기" 또는 "중간/기말" 또는 숫자일 수 있음 → 라벨 정규화
+      const filtered = arr.filter(r => String(r.student_id) === String(id)); // 🔧
+      if (Array.isArray(filtered) && filtered.length) {        // term 값이 "1학기/2학기" 또는 "중간/기말" 또는 숫자일 수 있음 → 라벨 정규화
         const normTerm = (t) => {
           const s = String(t ?? "").replace(/\s+/g, "");
           if (/^1학기|중간|mid(dle)?$/i.test(s)) return "중간고사";
@@ -260,7 +260,8 @@ export default function LifeRecordPage() {
       const srRaw = await getJSON(apiUrl(`school_report?student_id=${encodeURIComponent(id)}`));
 
       const un = unwrap(srRaw);
-      const item = Array.isArray(un) ? un[0] : un; // 배열이면 첫 건
+      const arr = Array.isArray(un) ? un : (Array.isArray(un?.reports) ? un.reports : []);
+      const item = arr.find(r => String(r.student_id) === String(id)) || arr[0]; // 🔧
       const picked =
         item?.behavior_summary ??
         item?.teacher_feedback ??
