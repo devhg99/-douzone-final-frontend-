@@ -219,7 +219,7 @@ export default function LifeRecordPage() {
       const arr = Array.isArray(gUn) ? gUn : (Array.isArray(gUn?.grades) ? gUn.grades : []);
 
       const filtered = arr.filter(r => String(r.student_id) === String(id)); // 🔧
-      if (Array.isArray(filtered) && filtered.length) {        // term 값이 "1학기/2학기" 또는 "중간/기말" 또는 숫자일 수 있음 → 라벨 정규화
+      if (filtered.length) {
         const normTerm = (t) => {
           const s = String(t ?? "").replace(/\s+/g, "");
           if (/^1학기|중간|mid(dle)?$/i.test(s)) return "중간고사";
@@ -229,7 +229,7 @@ export default function LifeRecordPage() {
           return "기말고사"; // 기본
         };
         const byTerm = { "중간고사": {}, "기말고사": {} };
-        for (const r of arr) {
+        for (const r of filtered) {
           const sid = Number(r?.subject_id);
           const term = normTerm(r?.term);
           const score = r?.average_score ?? r?.score ?? r?.point;
