@@ -190,17 +190,19 @@ export default function LifeRecordPage() {
       }
 
       if (Array.isArray(list) && list.length) {
-        const counts = list.reduce(
-          (acc, r) => {
-            const s = String(r?.status ?? "").trim();
-            if (s === "출석") acc.present++;
-            else if (s === "지각") acc.late++;
-            else if (s === "조퇴") acc.early++;
-            else if (s === "결석") acc.absent++;
-            return acc;
-          },
-          { present: 0, late: 0, early: 0, absent: 0 }
-        );
+        const mapStatus = (v) => {
+          const s = String(v ?? "").toLowerCase().replace(/\s+/g, "");
+          if (/(출석|present|attendance)/.test(s)) return "present";
+          if (/(지각|late)/.test(s)) return "late";
+          if (/(조퇴|earlyleave|early)/.test(s)) return "early";
+          if (/(결석|absent)/.test(s)) return "absent";
+          return null;
+        };
+        const counts = list.reduce((acc, r) => {
+          const k = mapStatus(r?.status ?? r?.attendance_status);
+          if (k && acc[k] != null) acc[k] += 1;
+          return acc;
+        }, { present: 0, late: 0, early: 0, absent: 0 });
 
         attendanceText =
           `출석 ${counts.present}회, 지각 ${counts.late}회, 조퇴 ${counts.early}회` +
@@ -297,11 +299,11 @@ export default function LifeRecordPage() {
 
       const ai = await getJSON(apiUrl(`ai/chat/`), {
         method: "POST",
-        body: JSON.stringify({ question: prompt }),
+        body: JSON.stringify({ message: prompt, question: prompt }), // 양쪽 호환
       });
       const text =
-        ai?.data?.answer ||
         ai?.answer ||
+        ai?.data?.answer ||
         "성실하게 학습에 임하며 또래와의 협력 활동에도 적극적입니다. 자기주도 학습 습관을 강화하면 더욱 성장할 수 있습니다.";
       setComment(text);
     } catch (e) {
