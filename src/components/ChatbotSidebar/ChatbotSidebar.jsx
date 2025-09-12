@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
 import { sendChatMessage } from '../../api/chatbot';
+import { sendCounselingMessage } from '../../api/chatbot_counseling';
 import useUIStore from '../../store/useUIStore';
 
 const ChatbotSidebar = ({ isOpen, onClose }) => {
@@ -158,13 +159,43 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
     setIsLoading(true);
 
     try {
-      // AI 응답 요청
-      const response = await sendChatMessage(userMessage);
+      let response;
+      
+      // consultation 탭인 경우 chatbot_counseling.js의 sendCounselingMessage 사용
+      if (activeTab === 'consultation') {
+        console.log('상담 챗봇 API 호출 시작:', userMessage);
+        response = await sendCounselingMessage(userMessage);
+        console.log('상담 챗봇 API 응답:', response);
+      } else {
+        // 다른 탭들은 기존의 sendChatMessage 사용
+        console.log('일반 챗봇 API 호출 시작:', userMessage);
+        response = await sendChatMessage(userMessage);
+        console.log('일반 챗봇 API 응답:', response);
+      }
+      
+      // 응답 구조 확인 및 처리
+      let aiMessage = '';
+      if (response) {
+        // 다양한 응답 구조에 대응
+        aiMessage = response.response || response.message || response.answer || response.text || response.content || '';
+        
+        // 응답이 없는 경우 전체 응답 객체를 문자열로 변환
+        if (!aiMessage && typeof response === 'object') {
+          aiMessage = JSON.stringify(response, null, 2);
+        }
+        
+        // 여전히 응답이 없는 경우
+        if (!aiMessage) {
+          aiMessage = "응답을 받았지만 내용을 찾을 수 없습니다.";
+        }
+      } else {
+        aiMessage = "서버로부터 응답을 받지 못했습니다.";
+      }
       
       // AI 응답 추가
       const aiMsg = {
         id: Date.now() + 1,
-        message: response.response || "죄송합니다. 응답을 생성할 수 없습니다.",
+        message: aiMessage,
         isUser: false,
         timestamp: new Date()
       };
@@ -175,17 +206,31 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
       }));
       
       // 일정 관련 작업인지 확인하고 프론트엔드 업데이트 트리거
-      const isEventRelated = checkIfEventRelated(userMessage, response.response);
+      const isEventRelated = checkIfEventRelated(userMessage, aiMessage);
       if (isEventRelated) {
         triggerEventRefresh();
       }
     } catch (error) {
-      console.error('챗봇 응답 오류:', error);
+      console.error('챗봇 응답 오류 상세:', error);
+      console.error('에러 타입:', typeof error);
+      console.error('에러 메시지:', error.message);
+      console.error('에러 스택:', error.stack);
+      
+      // 더 상세한 에러 메시지 생성
+      let errorMessage = "죄송합니다. 일시적인 오류가 발생했습니다.";
+      
+      if (error.message) {
+        errorMessage += `\n오류 내용: ${error.message}`;
+      }
+      
+      if (activeTab === 'consultation') {
+        errorMessage += "\n상담 챗봇 서비스에 문제가 있을 수 있습니다.";
+      }
       
       // 에러 메시지 추가
       const errorMsg = {
         id: Date.now() + 1,
-        message: "죄송합니다. 일시적인 오류가 발생했습니다. 다시 시도해주세요.",
+        message: errorMessage,
         isUser: false,
         timestamp: new Date()
       };
@@ -271,7 +316,10 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
                   출결
                 </button>
                 <button
-                  onClick={() => setActiveTab('consultation')}
+                  onClick={() => {
+                    console.log('상담 탭 클릭됨'); // console.log를 이 안으로 옮겼습니다.
+                    setActiveTab('consultation');
+                  }}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     activeTab === 'consultation'
                       ? 'bg-white/20 text-white'
@@ -439,4 +487,4 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
   );
 };
 
-export default ChatbotSidebar; 
+export default ChatbotSidebar;

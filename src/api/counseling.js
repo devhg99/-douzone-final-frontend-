@@ -36,4 +36,8 @@ export const getCounselingHistory = (studentId) =>
 export const saveCounseling = (data) =>
   API.post("/v1/counselings", data);
 
+// ✅ 상담 마스터 챗
+export const masterCouselingChat = (data) =>
+  API.post("/api/gemini/master-chat", data);
+
 export default API;
