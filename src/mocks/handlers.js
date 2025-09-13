@@ -3,7 +3,7 @@ import { rest } from 'msw';
 
 export const handlers = [
   // 로그인 API Mock
-  rest.post('/api/login', (req, res, ctx) => {
+  rest.post('/v1/login', (req, res, ctx) => {
     const { username } = req.body;
     return res(
       ctx.status(200),
@@ -15,7 +15,7 @@ export const handlers = [
   }),
 
   // 출결 조회 API Mock
-  rest.get('/api/attendance', (req, res, ctx) => {
+  rest.get('/v1/attendance', (req, res, ctx) => {
     return res(
       ctx.status(200),
       ctx.json([
