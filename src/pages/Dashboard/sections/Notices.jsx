@@ -29,6 +29,7 @@ export default function Notices({
       <header className="mb-3 flex items-center gap-2">
         <img
           src={headerIcon}
+          className="h-5 w-5"
           alt=""
           loading="lazy"
         />
