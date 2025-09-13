@@ -14,16 +14,16 @@ export const handlers = [
     );
   }),
 
-  // 출결 조회 API Mock
-  rest.get('/v1/attendance', (req, res, ctx) => {
-    return res(
-      ctx.status(200),
-      ctx.json([
-        { date: '2025-08-01', status: '출석', reason: '' },
-        { date: '2025-08-02', status: '결석', reason: '병가' },
-      ])
-    );
-  }),
+  // // 출결 조회 API Mock
+  // rest.get('/v1/attendance', (req, res, ctx) => {
+  //   return res(
+  //     ctx.status(200),
+  //     ctx.json([
+  //       { date: '2025-08-01', status: '출석', reason: '' },
+  //       { date: '2025-08-02', status: '결석', reason: '병가' },
+  //     ])
+  //   );
+  // }),
 
   // 추가 API 핸들러를 여기 더 작성 가능
 ];
