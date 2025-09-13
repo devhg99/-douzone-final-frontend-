@@ -18,6 +18,8 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
         return 'schedule';
       case '/problem-writing':
         return 'exam';
+      case '/counseling':
+        return 'consultation';
       case '/dashboard':
       default:
         return 'attendance';
