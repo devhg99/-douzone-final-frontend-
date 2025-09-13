@@ -23,50 +23,16 @@ const ChatMessage = ({ message, isUser = false, onSendMessage, timestamp }) => {
       return text.replace(boldRegex, '<strong>$1</strong>');
     };
     
-    // 일정 관련 텍스트 감지 및 버튼 추가 (더 정확한 패턴)
-    const scheduleRegex = /(\*\s*[^*\n]*?(?:수학여행|대청소|체육대회|운동회|시험|평가|행사)[^*\n]*?(?:일정|하는 날|예정|있어요|해요)[^*\n]*?)/g;
-    
-    // 미래 일정 감지 (공지사항 content에서 - 내용이 있는 경우만)
-    const futureScheduleRegex = /(\d+월\s*\d+일[^:]*:[^.]*?(?:예정되어\s*있습니다|있습니다|예정|일정|행사|대회|시험|평가|축제|공연|체험|먹거리|장터|부스|한마당|예방접종|예방|접종|독감|보건)[^.]*?)(?:\.|$)/g;
+    // 공지사항에서만 일정 추가 버튼 생성
     let lastIndex = 0;
     const elements = [];
     const processedSchedules = new Set(); // 중복 방지를 위한 Set
     
-    // 일정 관련 텍스트 찾기
-    let match;
-    while ((match = scheduleRegex.exec(cleanText)) !== null) {
-      // 일정 텍스트 이전 부분 추가
-      if (match.index > lastIndex) {
-        const beforeText = cleanText.slice(lastIndex, match.index);
-        if (beforeText) {
-          elements.push(beforeText);
-        }
-      }
-      
-      // 일정 텍스트와 버튼 추가
-      const scheduleText = match[1];
-      
-      // 중복 체크
-      if (!processedSchedules.has(scheduleText)) {
-        processedSchedules.add(scheduleText);
-        elements.push(
-          <div key={`schedule-${match.index}`} className="mb-2">
-            <div className="text-sm">{scheduleText}</div>
-            <button
-              onClick={() => handleScheduleAdd(scheduleText)}
-              className="inline-block mt-1 px-3 py-1 bg-gradient-to-r from-green-500 to-green-600 text-white text-xs rounded-md hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-sm hover:shadow-md"
-            >
-              📅 일정 추가
-            </button>
-          </div>
-        );
-      }
-      
-      lastIndex = match.index + match[0].length;
-    }
-    
-    // 미래 일정 찾기 (공지사항에서만)
     if (isNoticeResponse) {
+      // 미래 일정 감지 (공지사항 content에서 - 내용이 있는 경우만)
+      const futureScheduleRegex = /(\d+월\s*\d+일[^:]*:[^.]*?(?:예정되어\s*있습니다|있습니다|예정|일정|행사|대회|시험|평가|축제|공연|체험|먹거리|장터|부스|한마당|예방접종|예방|접종|독감|보건)[^.]*?)(?:\.|$)/g;
+      
+      let match;
       while ((match = futureScheduleRegex.exec(cleanText)) !== null) {
         // 미래 일정 텍스트 이전 부분 추가
         if (match.index > lastIndex) {
