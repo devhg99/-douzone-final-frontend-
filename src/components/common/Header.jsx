@@ -19,7 +19,7 @@ const Header = () => {
     '/homeLetter': '가정통신문',
     '/notice': '공지사항',
     '/staffCollaboration': '교직원 협업',
-    '/classSchedule': '학급 일정',
+    '/Schedule': '학급 일정',
     '/timetable': '시간표 관리',
     '/events': '교내 행사',
     '/documents': '행정 서류',
