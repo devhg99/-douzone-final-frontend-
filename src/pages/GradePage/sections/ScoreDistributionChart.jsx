@@ -1,7 +1,16 @@
 // src/pages/GradePage/sections/ScoreDistributionChart.jsx
 import React from "react";
 import { Doughnut } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  ArcElement,
+  Tooltip,
+  Legend
+} from "chart.js";
 import ChartDataLabels from "chartjs-plugin-datalabels";
+
+// ✅ Chart.js 요소 등록 (앱 실행 시 최초 1회)
+ChartJS.register(ArcElement, Tooltip, Legend, ChartDataLabels);
 
 export default function ScoreDistributionChart({ distribution = {}, overview }) {
   const labels = ["90-100", "80-89", "70-79", "60-69", "0-59"];
@@ -30,7 +39,7 @@ export default function ScoreDistributionChart({ distribution = {}, overview }) 
               text: label,
               fillStyle: dataset.backgroundColor[i],
               index: i,
-              hidden: false, // ✅ 줄 긋는 효과 제거 (무조건 표시)
+              hidden: false, // ✅ 범례 줄긋기 비활성화
             }));
           },
         },
@@ -43,5 +52,5 @@ export default function ScoreDistributionChart({ distribution = {}, overview }) 
     },
   };
 
-  return <Doughnut data={data} options={options} plugins={[ChartDataLabels]} />;
+  return <Doughnut data={data} options={options} />;
 }
