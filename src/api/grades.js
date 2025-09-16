@@ -21,7 +21,8 @@ async function getJSON(url, opts = {}) {
 }
 
 /** 특정 반(class_id)의 성적 대시보드 조회 */
-export async function fetchGradesDashboard(classId) {
+export async function fetchGradesDashboard(classId, term = "2학기") {
   // ✅ success, message, data 모두 유지
-  return await getJSON(apiUrl(`grades/dashboard/${classId}`));
+  const query = `?term=${encodeURIComponent(term)}`;
+  return await getJSON(apiUrl(`grades/dashboard/${classId}${query}`));
 }

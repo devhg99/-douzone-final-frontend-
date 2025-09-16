@@ -1,51 +1,47 @@
 // src/pages/GradePage/sections/ScoreDistributionChart.jsx
 import React from "react";
 import { Doughnut } from "react-chartjs-2";
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import ChartDataLabels from "chartjs-plugin-datalabels";
 
-ChartJS.register(ArcElement, Tooltip, Legend, ChartDataLabels);
-
-export default function ScoreDistributionChart({ distribution, overview }) {
-  const labels = Object.keys(distribution);
-  const values = Object.values(distribution);
+export default function ScoreDistributionChart({ distribution = {}, overview }) {
+  const labels = ["90-100", "80-89", "70-79", "60-69", "0-59"];
+  const colors = ["#2ecc71", "#4287f5", "#FFA500", "#FF8C42", "#FF4C4C"];
 
   const data = {
     labels,
     datasets: [
       {
-        label: "학생 수",
-        data: values,
-        backgroundColor: [
-          "#22c55e", // 90+
-          "#3b82f6", // 80~89
-          "#f59e0b", // 70~79
-          "#f97316", // 60~69
-          "#ef4444", // 0~59
-        ],
+        data: labels.map((l) => distribution[l] || 0),
+        backgroundColor: colors,
       },
     ],
   };
 
-  return (
-    <Doughnut
-      data={data}
-      options={{
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          datalabels: {
-            formatter: (val, ctx) => {
-              const label = ctx.chart.data.labels[ctx.dataIndex];
-              return `${val}명`; // ✅ 차트 위에 인원 표시
-            },
-            color: "#fff",
-            font: { size: 11, weight: "bold" },
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: "right",
+        labels: {
+          generateLabels: (chart) => {
+            const dataset = chart.data.datasets[0];
+            return chart.data.labels.map((label, i) => ({
+              text: label,
+              fillStyle: dataset.backgroundColor[i],
+              index: i,
+              hidden: false, // ✅ 줄 긋는 효과 제거 (무조건 표시)
+            }));
           },
-          tooltip: { enabled: true },
-          legend: { position: "right" },
         },
-      }}
-    />
-  );
+      },
+      datalabels: {
+        color: "#fff",
+        formatter: (value) => (value > 0 ? `${value}명` : ""),
+        font: { weight: "bold" },
+      },
+    },
+  };
+
+  return <Doughnut data={data} options={options} plugins={[ChartDataLabels]} />;
 }
