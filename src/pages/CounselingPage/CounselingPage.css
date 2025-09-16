@@ -241,39 +241,19 @@
   font-weight: 600;
 }
 
-/* ============================= */
-/* AI 상담일지 미리보기 */
-/* ============================= */
-.ai-preview-box {
-  margin-top: 1.5rem;
-  padding: 1rem;
-  border-radius: 0.75rem;
-  border: 2px dashed #2563eb;
-  background: #f9fafb;
-}
-
-.ai-preview-box h4 {
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-}
-
-.ai-preview-box .placeholder {
-  color: #6b7280;
-  font-size: 0.9rem;
-  text-align: center;
-}
 
 /* ============================= */
 /* 상담 현황 통계 */
 /* ============================= */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(200px, 1fr));
   gap: 1rem;
   margin-bottom: 1.2rem;
 }
 
 .stat-card {
+  border-top: none !important;   /* 상단 파란색 라인 제거 */
   padding: 1rem;
   border-radius: 0.75rem;
   text-align: center;
@@ -281,6 +261,11 @@
   border: 1px solid #e5e7eb;
   font-size: 1.5rem;
   font-weight: 700;
+  position: relative; /* ::before 제거용 */
+}
+
+.stat-card::before {
+  content: none !important; /* 혹시 장식 들어온 경우 제거 */
 }
 
 .stat-card span {

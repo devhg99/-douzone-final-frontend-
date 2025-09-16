@@ -94,24 +94,6 @@ const CounselingPage = () => {
       .then((res) => setHistory(res.data || []));
   };
 
-  // ✅ AI 상담일지 미리보기
-  const handleAIGenerate = async () => {
-    if (!selectedStudent) {
-      alert("학생을 선택하세요!");
-      return;
-    }
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/ai-preview`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: form.title || "상담일지를 작성해주세요" }),
-      }).then((r) => r.json());
-      setAiPreview(res.data.preview);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // ✅ 상담일지 삭제
   const handleDelete = async (id) => {
@@ -283,30 +265,10 @@ const CounselingPage = () => {
                 />
 
                 <div className="button-group">
-                  <button
-                    onClick={handleAIGenerate}
-                    disabled={loading}
-                    className="btn-primary"
-                  >
-                    {loading ? "생성 중..." : "🤖 AI 상담일지 생성"}
-                  </button>
                   <button onClick={handleSave} className="btn-secondary">
                     💾 저장
                   </button>
                 </div>
-              </div>
-
-              {/* AI 상담일지 미리보기 */}
-              <div className="card-box">
-                <h3 className="form-title">🤖 AI 생성 상담일지 미리보기</h3>
-                {aiPreview ? (
-                  <p>{aiPreview}</p>
-                ) : (
-                  <p className="placeholder">
-                    상담 내용을 입력하고 AI 생성 버튼을 클릭하면
-                    정형화된 상담일지가 생성됩니다.
-                  </p>
-                )}
               </div>
             </div>
 
