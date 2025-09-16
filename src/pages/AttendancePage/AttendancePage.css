@@ -1390,11 +1390,6 @@ select:focus {
   width: 100%;
 }
 
-/* 전체현황 테이블 컨테이너 스타일 */
-.summary-container {
-  /* 기본 스타일 유지 */
-}
-
 /* 빈 컬럼 스타일 (일별현황의 출결상태, 사유 컬럼과 동일한 너비) */
 .col-empty {
   width: 120px;
