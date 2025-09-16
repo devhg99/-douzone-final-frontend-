@@ -8,8 +8,8 @@ import LifeRecordPage from "./pages/LifeRecord/LifeRecordPage"; // ✅ 추가
 import SchedulePage from "./pages/SchedulePage"; // ✅ 추가
 import ProblemWritingPage from "./pages/ProblemWritingPage/ProblemWritingPage"; // ✅ 추가
 import CounselingPage from "./pages/CounselingPage";
+import AttendancePage from "./pages/AttendancePage/AttendancePage";
 import GradePage from "./pages/GradePage"; // ✅ 성적평가 페이지
-
 function App() {
   return (
     <Router>
@@ -21,8 +21,8 @@ function App() {
         <Route element={<Layout />}>
           {/* 대시보드 및 기존 섹션들 */}
           <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/attendance" element={<DashboardPage />} />
-          <Route path="/grades" element={<GradePage />} /> {/* ✅ 성적평가 페이지로 교체 */}
+          <Route path="/attendance" element={<AttendancePage />} />
+          <Route path="/grades" element={<GradePage />} />
           <Route path="/progress" element={<DashboardPage />} />
           <Route path="/notice" element={<DashboardPage />} />
           <Route path="/staffCollaboration" element={<DashboardPage />} />

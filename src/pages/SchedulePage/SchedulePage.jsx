@@ -428,10 +428,6 @@ export default function SchedulePage() {
 
   return (
     <div className="px-6 pb-6 bg-gray-50 min-h-screen">
-      {/* 헤더 */}
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold text-gray-900">학급 일정</h1>
-      </div>
 
       {/* 메인 콘텐츠 */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">

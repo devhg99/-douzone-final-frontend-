@@ -8,7 +8,7 @@ import useUIStore from '../../store/useUIStore';
 
 const ChatbotSidebar = ({ isOpen, onClose }) => {
   const messagesEndRef = useRef(null);
-  const { triggerEventRefresh } = useUIStore();
+  const { triggerEventRefresh, triggerAttendanceRefresh, triggerAttendanceStatsRefresh } = useUIStore();
   const location = useLocation();
   
   // URL 경로에 따른 초기 탭 설정
@@ -315,6 +315,13 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
       if (isEventRelated) {
         triggerEventRefresh();
       }
+      
+      // 출석 관련 작업인지 확인하고 프론트엔드 업데이트 트리거
+      const isAttendanceRelated = checkIfAttendanceRelated(userMessage, aiMessage);
+      if (isAttendanceRelated) {
+        triggerAttendanceRefresh(); // 일별현황 업데이트
+        triggerAttendanceStatsRefresh(); // 전체현황 통계 업데이트
+      }
     } catch (error) {
       console.error('챗봇 응답 오류 상세:', error);
       console.error('에러 타입:', typeof error);
@@ -363,6 +370,22 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
     );
     
     return hasEventKeyword && hasSuccessKeyword;
+  };
+
+  // 출석 관련 작업인지 확인하는 함수
+  const checkIfAttendanceRelated = (userMessage, aiResponse) => {
+    const attendanceKeywords = ['출석', '결석', '지각', '조퇴', '출석처리', '결석처리', '지각처리', '조퇴처리'];
+    const successKeywords = ['처리되었습니다', '등록되었습니다', '성공', '완료'];
+    
+    const hasAttendanceKeyword = attendanceKeywords.some(keyword => 
+      userMessage.includes(keyword) || (aiResponse && aiResponse.includes(keyword))
+    );
+    
+    const hasSuccessKeyword = successKeywords.some(keyword => 
+      aiResponse && aiResponse.includes(keyword)
+    );
+    
+    return hasAttendanceKeyword && hasSuccessKeyword;
   };
 
   return (
