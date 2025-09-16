@@ -20,6 +20,8 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
         return 'exam';
       case '/counseling':
         return 'consultation';
+      case '/grades':
+        return 'grades';
       case '/dashboard':
       default:
         return 'attendance';
@@ -486,6 +488,32 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
                   출결
                 </button>
                 <button
+                  onClick={() => setActiveTab('grades')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'grades'
+                      ? 'bg-white/20 text-white'
+                      : 'text-white/70 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                  성적
+                </button>
+                <button
+                  onClick={() => setActiveTab('exam')}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'exam'
+                      ? 'bg-white/20 text-white'
+                      : 'text-white/70 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  시험지
+                </button>
+                <button
                   onClick={() => {
                     console.log('상담 탭 클릭됨');
                     setActiveTab('consultation');
@@ -515,19 +543,6 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
                   일정
                 </button>
                 <button
-                  onClick={() => setActiveTab('exam')}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    activeTab === 'exam'
-                      ? 'bg-white/20 text-white'
-                      : 'text-white/70 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  시험지
-                </button>
-                <button
                   onClick={() => setActiveTab('notice')}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     activeTab === 'notice'
@@ -539,19 +554,6 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
                   </svg>
                   공지사항
-                </button>
-                <button
-                  onClick={() => setActiveTab('grades')}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    activeTab === 'grades'
-                      ? 'bg-white/20 text-white'
-                      : 'text-white/70 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                  성적
                 </button>
               </div>
             </div>
@@ -583,14 +585,17 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
                  <div>
                    <h2 className="text-xl font-bold text-gray-900">
                      {activeTab === 'attendance' ? '출결 도우미' : 
+                      activeTab === 'grades' ? '성적 도우미' :
                       activeTab === 'consultation' ? '상담 도우미' : 
                       activeTab === 'schedule' ? '일정 도우미' : 
                       activeTab === 'exam' ? '시험지 도우미' : 
-                      activeTab === 'notice' ? '공지사항 도우미' : '성적 도우미'}
+                      activeTab === 'notice' ? '공지사항 도우미' : '출결 도우미'}
                    </h2>
                    <p className="text-sm text-gray-600 mt-1">
                      {activeTab === 'attendance'
                        ? '출석 현황 확인, 결석자 추출, 출결 통계 생성, 출결 관리'
+                       : activeTab === 'grades'
+                       ? '성적 조회, 성적 분석, 성적 통계 생성, 성적 리포트 작성, 성적 관리'
                        : activeTab === 'consultation'
                        ? '학생 상담, 학부모 상담, 상담일지 작성'
                        : activeTab === 'schedule'
@@ -599,7 +604,7 @@ const ChatbotSidebar = ({ isOpen, onClose }) => {
                        ? '문제지 생성, 시험지 관리, 문제 수정, 정답 확인, 시험지 관련 업무'
                        : activeTab === 'notice'
                        ? '공지사항 조회, 공지사항 작성, 공지사항 수정, 공지사항 관리'
-                       : '성적 입력, 성적 분석, 성적 통계 생성, 성적 리포트 작성, 성적 관리'
+                       : '출석 현황 확인, 결석자 추출, 출결 통계 생성, 출결 관리'
                      }
                    </p>
                  </div>
