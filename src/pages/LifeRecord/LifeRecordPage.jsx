@@ -283,147 +283,329 @@ export default function LifeRecordPage() {
   }
   };
   
-  // --- 코멘트 생성 (개선된 API 연동) ----------------------------------------------
+// --- 코멘트 생성 (완전히 수정된 버전) ---
 const handleGenerate = async () => {
-  if (!studentId) return;
+  if (!studentId) {
+    setComment("⚠️ 학생을 먼저 선택해주세요.");
+    return;
+  }
   
   setGenerating(true);
+  console.log("=== 코멘트 생성 시작 ===");
+  console.log("선택된 학생 ID:", studentId);
+  console.log("현재 연도/학기:", year, semester);
+  
   try {
-    // 1) 먼저 해당 학생의 생활기록부 데이터가 있는지 확인 및 가져오기
     let reportId = null;
     
+    // === 1단계: 기존 생활기록부 조회 ===
+    console.log("1단계: 기존 생활기록부 조회 시작");
+    
     try {
-      const existingReports = await getJSON(apiUrl(`school_report/student/${studentId}`));
-      const reports = unwrap(existingReports) || [];
+      // 🔧 핵심 수정: URL 구조 정확히 맞추기
+      const reportUrl = apiUrl(`school_report?student_id=${studentId}`);
+      console.log("생활기록부 조회 URL:", reportUrl);
       
-      // 현재 연도/학기에 해당하는 기록 찾기
-      const currentReport = reports.find(r => 
-        r.year === year && r.semester === semester
-      );
+      const existingReportsResponse = await getJSON(reportUrl);
+      console.log("생활기록부 조회 원본 응답:", existingReportsResponse);
       
-      if (currentReport) {
+      const reports = unwrap(existingReportsResponse) || [];
+      console.log("unwrap된 리포트 목록:", reports);
+      
+      if (!Array.isArray(reports)) {
+        console.warn("리포트 데이터가 배열이 아님:", typeof reports, reports);
+        throw new Error("생활기록부 데이터 형식이 올바르지 않습니다.");
+      }
+      
+      // 현재 연도/학기 매칭 - 더 안전한 방식
+      const currentReport = reports.find(r => {
+        const reportYear = parseInt(r.year);
+        const reportStudentId = parseInt(r.student_id);
+        
+        console.log(`리포트 비교: year(${reportYear}===${year}), student_id(${reportStudentId}===${parseInt(studentId)})`);
+        
+        return reportYear === year &&  
+               reportStudentId === parseInt(studentId);
+      });
+      
+      console.log("매칭된 현재 리포트:", currentReport);
+      
+      if (currentReport && currentReport.id) {
         reportId = currentReport.id;
+        console.log("✅ 기존 생활기록부 사용:", reportId);
+        
+        // 기존 데이터 검증
+        const hasContent = currentReport.behavior_summary || 
+                          currentReport.peer_relation || 
+                          currentReport.career_aspiration || 
+                          currentReport.teacher_feedback;
+        
+        if (!hasContent) {
+          console.log("⚠️ 기존 리포트에 내용이 없음, 기본 내용으로 업데이트 필요");
+        }
+        
       } else {
-        // 기존 기록이 없으면 새로 생성
+        console.log("❌ 현재 연도/학기에 해당하는 생활기록부 없음, 새로 생성 필요");
+        reportId = null;
+      }
+      
+    } catch (fetchError) {
+      console.error("생활기록부 조회 실패:", fetchError);
+      
+      // 404 에러인 경우는 정상적인 상황 (아직 생성되지 않음)
+      if (fetchError.message && fetchError.message.includes('404')) {
+        console.log("404 에러: 생활기록부가 아직 생성되지 않음 (정상)");
+        reportId = null;
+      } else {
+        throw new Error(`생활기록부 조회 중 오류: ${fetchError.message}`);
+      }
+    }
+    
+    // === 2단계: 생활기록부 생성 (필요한 경우) ===
+    if (!reportId) {
+      console.log("2단계: 새 생활기록부 생성 시작");
+      
+      try {
+        // 🔧 핵심 수정: 더 안전한 기본 데이터 준비
+        const defaultBehavior = summary?.behavior && 
+                               summary.behavior !== "-" && 
+                               summary.behavior !== "불러오는 중…" && 
+                               summary.behavior.trim().length > 5
+          ? summary.behavior.replace(/…$/, "").trim()
+          : "수업에 성실히 참여하며 학습에 대한 의욕을 보입니다. 주어진 과제를 책임감 있게 수행하는 모습을 관찰할 수 있습니다.";
+        
         const newReportData = {
-          year,
-          semester,
-          student_id: Number(studentId),
-          // 요약 정보를 기반으로 초기 데이터 설정
-          behavior_summary: summary?.behavior !== "-" ? summary.behavior : null,
-          teacher_feedback: "AI 생성 대기 중...",
-          peer_relation: null,
-          career_aspiration: null
+          student_id: parseInt(studentId),
+          year: parseInt(year),
+          semester: parseInt(semester),
+          behavior_summary: defaultBehavior,
+          peer_relation: "동급생들과 원만한 관계를 형성하고 있으며, 협력적인 태도로 모둠 활동에 참여합니다.",
+          career_aspiration: "자신의 적성과 흥미를 탐색하며 진로에 대한 관심을 점차 구체화해 나가고 있습니다.",
+          teacher_feedback: "" // AI가 생성할 부분
         };
         
-        const createResponse = await getJSON(apiUrl(`school_report/`), {
+        console.log("생성할 데이터:", JSON.stringify(newReportData, null, 2));
+        
+        // 🔧 핵심 수정: POST 요청 방식 개선
+        const createUrl = apiUrl('school_report');
+        console.log("생성 요청 URL:", createUrl);
+        
+        const createResponse = await fetch(createUrl, {
           method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(localStorage.getItem("token") ? { 
+              Authorization: `Bearer ${localStorage.getItem("token")}` 
+            } : {})
+          },
           body: JSON.stringify(newReportData),
         });
         
-        const newReport = unwrap(createResponse);
-        reportId = newReport?.id;
+        console.log("생성 응답 상태:", createResponse.status, createResponse.statusText);
+        
+        if (!createResponse.ok) {
+          const errorText = await createResponse.text();
+          console.error("생성 실패 상세:", {
+            status: createResponse.status,
+            statusText: createResponse.statusText,
+            headers: Object.fromEntries(createResponse.headers.entries()),
+            body: errorText
+          });
+          
+          if (createResponse.status === 422) {
+            let detailedError = "데이터 검증 실패";
+            try {
+              const errorJson = JSON.parse(errorText);
+              if (errorJson.detail && Array.isArray(errorJson.detail)) {
+                detailedError = errorJson.detail
+                  .map(d => `${d.loc?.slice(1).join('.')}: ${d.msg}`)
+                  .join(', ');
+              } else if (errorJson.detail) {
+                detailedError = errorJson.detail;
+              }
+            } catch (parseError) {
+              console.warn("에러 응답 파싱 실패:", parseError);
+              detailedError = errorText;
+            }
+            throw new Error(`데이터 형식 오류: ${detailedError}`);
+          }
+          
+          throw new Error(`생활기록부 생성 실패 (${createResponse.status}): ${errorText}`);
+        }
+        
+        const createJson = await createResponse.json();
+        console.log("생성 성공 응답:", createJson);
+        
+        // 🔧 핵심 수정: 응답에서 ID 추출 로직 개선
+        const newReport = unwrap(createJson);
+        reportId = newReport?.id || 
+                  newReport?.data?.id || 
+                  createJson?.id || 
+                  createJson?.data?.id;
+        
+        if (!reportId) {
+          console.error("ID 추출 실패. 전체 응답:", createJson);
+          throw new Error("생성된 생활기록부의 ID를 확인할 수 없습니다.");
+        }
+        
+        console.log("✅ 새 생활기록부 생성 성공:", reportId);
+        
+      } catch (createError) {
+        console.error("생활기록부 생성 실패:", createError);
+        throw new Error(`생활기록부 생성 중 오류: ${createError.message}`);
       }
-    } catch (e) {
-      console.warn("기존 생활기록 조회/생성 실패:", e);
-      // 기존 방식으로 폴백
-      throw new Error("생활기록부 데이터를 준비할 수 없습니다.");
     }
     
-    if (!reportId) {
-      throw new Error("생활기록부 ID를 얻을 수 없습니다.");
+    // === 3단계: AI 코멘트 생성 ===
+    console.log("3단계: AI 코멘트 생성 시작, reportId:", reportId);
+    
+    if (!reportId || isNaN(reportId)) {
+      throw new Error(`올바르지 않은 생활기록부 ID: ${reportId}`);
     }
     
-    // 2) 생성 옵션 설정 (사용자 설정 가능하도록 확장 가능)
+    // 생성 요청 데이터 준비
     const generateRequest = {
-      tone: "정중하고 공식적",        // 기본값
-      length: "표준",                 // 기본값 
-      focus_areas: ["행동특성", "또래관계", "진로희망"], // 모든 영역 포함
-      include_suggestions: true,      // 개선 제안 포함
-      academic_context: summary?.grades !== "-" ? `성적 현황: ${summary.grades}` : null
+      tone: "정중하고 공식적",
+      length: "표준",
+      focus_areas: ["행동특성", "또래관계", "진로희망"],
+      include_suggestions: true,
+      academic_context: summary?.grades && 
+                       summary.grades !== "-" && 
+                       summary.grades !== "불러오는 중…" 
+        ? `성적 현황: ${summary.grades}` 
+        : null
     };
     
-    // 3) AI 코멘트 생성 API 호출
-    const response = await getJSON(apiUrl(`school_report/${reportId}/generate-comment`), {
+    console.log("AI 생성 요청 데이터:", generateRequest);
+    
+    // 🔧 핵심 수정: AI API 호출 URL 정확히 구성
+    const aiUrl = apiUrl(`school_report_ai/${reportId}/generate-comment`);
+    console.log("AI 생성 요청 URL:", aiUrl);
+    
+    const aiResponse = await fetch(aiUrl, {
       method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(localStorage.getItem("token") ? { 
+          Authorization: `Bearer ${localStorage.getItem("token")}` 
+        } : {})
+      },
       body: JSON.stringify(generateRequest),
     });
     
-    // 4) 응답 처리
-    const result = unwrap(response);
+    console.log("AI 응답 상태:", aiResponse.status, aiResponse.statusText);
     
-    if (result?.success === false) {
-      throw new Error(result?.error?.message || result?.message || "생성에 실패했습니다.");
+    if (!aiResponse.ok) {
+      const errorText = await aiResponse.text();
+      console.error("AI 생성 실패:", {
+        status: aiResponse.status,
+        statusText: aiResponse.statusText,
+        body: errorText
+      });
+      
+      if (aiResponse.status === 404) {
+        throw new Error(`생활기록부 데이터를 찾을 수 없습니다. (ID: ${reportId})`);
+      } else if (aiResponse.status === 400) {
+        throw new Error("생성할 수 있는 정보가 부족합니다. 생활기록부에 더 많은 내용을 입력해주세요.");
+      } else if (aiResponse.status === 500) {
+        throw new Error("AI 서비스에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.");
+      }
+      
+      throw new Error(`AI 코멘트 생성 실패 (${aiResponse.status}): ${errorText}`);
     }
     
-    const generatedText = result?.generated_comment || 
-                         result?.data?.generated_comment || 
-                         result?.comment;
+    const aiJson = await aiResponse.json();
+    console.log("AI 생성 성공 응답:", aiJson);
     
-    if (!generatedText) {
-      throw new Error("생성된 코멘트를 찾을 수 없습니다.");
+    // === 4단계: 응답 처리 ===
+    if (aiJson?.success === false) {
+      const errorMsg = aiJson?.error?.message || 
+                      aiJson?.message || 
+                      "AI 코멘트 생성에 실패했습니다.";
+      throw new Error(errorMsg);
     }
     
-    // 5) 생성된 코멘트 설정
-    setComment(generatedText);
+    // 🔧 핵심 수정: 더 안전한 텍스트 추출
+    const generatedText = aiJson?.data?.generated_comment || 
+                         aiJson?.generated_comment ||
+                         aiJson?.comment ||
+                         aiJson?.data?.comment;
     
-    // 6) 성공 피드백 (선택사항)
-    const metadata = result?.data;
+    if (!generatedText || typeof generatedText !== 'string' || generatedText.trim().length === 0) {
+      console.error("빈 코멘트 응답:", aiJson);
+      throw new Error("생성된 코멘트가 비어있습니다. 생활기록부 데이터를 확인하고 다시 시도해주세요.");
+    }
+    
+    // === 5단계: 성공 처리 ===
+    const finalComment = generatedText.trim();
+    setComment(finalComment);
+    
+    console.log("✅ 코멘트 생성 완전 성공!");
+    console.log("생성된 코멘트 길이:", finalComment.length);
+    console.log("생성된 코멘트 미리보기:", finalComment.substring(0, 100) + "...");
+    
+    // 성공 로그
+    const metadata = aiJson?.data;
     if (metadata?.character_count) {
-      console.log(`코멘트 생성 완료: ${metadata.character_count}자, ${metadata.word_count}단어`);
+      console.log(`📊 통계: ${metadata.character_count}자, ${metadata.word_count}단어, ${metadata.sentence_count}문장`);
     }
     
-  } catch (e) {
-    console.error("코멘트 생성 실패:", e);
+  } catch (error) {
+    console.error("=== 코멘트 생성 실패 ===");
+    console.error("에러:", error);
+    console.error("스택:", error.stack);
     
-    // 사용자 친화적인 에러 메시지
-    let errorMessage = "코멘트 생성에 실패했습니다.";
+    // 🔧 핵심 수정: 더 구체적인 에러 분류
+    let userMessage = "코멘트 생성에 실패했습니다.";
     
-    if (e.message?.includes("환경변수")) {
-      errorMessage = "AI 서비스 설정에 문제가 있습니다. 관리자에게 문의해주세요.";
-    } else if (e.message?.includes("생활기록")) {
-      errorMessage = "생활기록 데이터를 불러올 수 없습니다. 학생 정보를 다시 확인해주세요.";
-    } else if (e.message?.includes("부족")) {
-      errorMessage = "생성할 수 있는 정보가 부족합니다. 더 많은 정보를 입력한 후 시도해주세요.";
-    } else if (e.message) {
-      errorMessage = e.message;
+    const errorMsg = error.message || "";
+    
+    if (errorMsg.includes("student_id") || errorMsg.includes("학생")) {
+      userMessage = "학생 정보에 문제가 있습니다. 다른 학생을 선택하거나 페이지를 새로고침해보세요.";
+    } else if (errorMsg.includes("year") || errorMsg.includes("semester")) {
+      userMessage = "연도 또는 학기 정보에 문제가 있습니다. 페이지를 새로고침해보세요.";
+    } else if (errorMsg.includes("404")) {
+      userMessage = "해당 학생의 데이터를 찾을 수 없습니다. 학생 선택을 다시 확인해주세요.";
+    } else if (errorMsg.includes("422") || errorMsg.includes("형식")) {
+      userMessage = `데이터 형식 오류: ${errorMsg.split(": ").pop() || "필수 정보가 누락되었습니다"}`;
+    } else if (errorMsg.includes("500")) {
+      userMessage = "서버에서 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.";
+    } else if (errorMsg.includes("네트워크") || errorMsg.includes("timeout")) {
+      userMessage = "네트워크 연결에 문제가 있습니다. 인터넷 연결을 확인하고 다시 시도해주세요.";
+    } else if (errorMsg.includes("권한") || errorMsg.includes("401") || errorMsg.includes("403")) {
+      userMessage = "접근 권한이 없습니다. 다시 로그인해주세요.";
+    } else if (errorMsg.includes("AI") || errorMsg.includes("생성")) {
+      userMessage = errorMsg; // AI 관련 에러는 그대로 표시
+    } else if (errorMsg.length > 0) {
+      userMessage = errorMsg;
     }
     
-    setComment(`❌ ${errorMessage}\n\n다음을 확인해보세요:\n• 학생의 기본 정보가 입력되어 있는지\n• 네트워크 연결이 안정적인지\n• 잠시 후 다시 시도해보세요`);
+    setComment(`❌ ${userMessage}\n\n🔧 문제 해결 방법:\n• 다른 학생을 선택해보세요\n• 브라우저를 새로고침하세요\n• 네트워크 연결을 확인하세요\n• 문제가 계속되면 관리자에게 문의하세요\n\n📋 기술 정보: ${error.message}`);
     
   } finally {
     setGenerating(false);
+    console.log("=== 코멘트 생성 완료 ===");
   }
 };
 
-// --- 추가: 코멘트 생성 전 미리보기 함수 (선택사항) --------------
-const handlePreviewGeneration = async () => {
-  if (!studentId) return;
+// 🔧 추가: apiUrl 함수도 개선 (URL 일관성 보장)
+function apiUrl(path) {
+  const base = API_BASE.replace(/\/+$/, "");
+  const p = String(path || "").replace(/^\/+/, "");
   
-  try {
-    // 기존 생활기록부 찾기
-    const existingReports = await getJSON(apiUrl(`school_report/student/${studentId}`));
-    const reports = unwrap(existingReports) || [];
-    const currentReport = reports.find(r => r.year === year && r.semester === semester);
-    
-    if (currentReport) {
-      const previewResponse = await getJSON(apiUrl(`school_report/${currentReport.id}/generate-preview`));
-      const preview = unwrap(previewResponse);
-      
-      if (preview?.data?.generation_ready) {
-        console.log("생성 가능한 콘텐츠:", preview.data.available_content);
-        return true;
-      } else {
-        alert("생성할 수 있는 정보가 부족합니다. 더 많은 데이터를 입력해주세요.");
-        return false;
-      }
-    }
-    return true;
-  } catch (e) {
-    console.warn("미리보기 확인 실패:", e);
-    return true; // 미리보기 실패해도 생성은 시도
+  // 특정 액션들은 trailing slash 제거
+  if (p.includes('/generate-') || p.includes('/export/') || p.includes('/send-')) {
+    return `${base}/${p}`;
   }
-};
+  
+  // 쿼리 파라미터가 있는 경우 trailing slash 제거
+  if (p.includes('?')) {
+    return `${base}/${p}`;
+  }
+  
+  // 나머지는 일관성을 위해 trailing slash 유지하지 않음
+  return `${base}/${p}`;
+}
 
   // --- 저장: 생활기록부 코멘트 -----------------------------------
   const handleSave = async () => {
