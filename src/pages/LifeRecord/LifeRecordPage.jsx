@@ -282,37 +282,148 @@ export default function LifeRecordPage() {
     setLoadingSummary(false);
   }
   };
-  // --- 코멘트 생성 ----------------------------------------------
-  const handleGenerate = async () => {
-    if (!studentId) return;
-    setGenerating(true);
+  
+  // --- 코멘트 생성 (개선된 API 연동) ----------------------------------------------
+const handleGenerate = async () => {
+  if (!studentId) return;
+  
+  setGenerating(true);
+  try {
+    // 1) 먼저 해당 학생의 생활기록부 데이터가 있는지 확인 및 가져오기
+    let reportId = null;
+    
     try {
-      const prompt = [
-        `학생: ${studentName || studentId}`,
-        `출결: ${summary?.attendance || "-"}`,
-        `성적: ${summary?.grades || "-"}`,
-        `행동특성: ${summary?.behavior || "-"}`,
-        "",
-        "위 정보를 바탕으로 생활기록부 코멘트를 2~3문장으로 간결하게 작성해줘.",
-        "어조: 담임교사 기록체, 구체적 강점 1개 이상, 개선점 1개(있다면) 부드럽게.",
-      ].join("\n");
-
-      const ai = await getJSON(apiUrl(`ai/chat/`), {
-        method: "POST",
-        body: JSON.stringify({ message: prompt, question: prompt }), // 양쪽 호환
-      });
-      const text =
-        ai?.answer ||
-        ai?.data?.answer ||
-        "성실하게 학습에 임하며 또래와의 협력 활동에도 적극적입니다. 자기주도 학습 습관을 강화하면 더욱 성장할 수 있습니다.";
-      setComment(text);
+      const existingReports = await getJSON(apiUrl(`school_report/student/${studentId}`));
+      const reports = unwrap(existingReports) || [];
+      
+      // 현재 연도/학기에 해당하는 기록 찾기
+      const currentReport = reports.find(r => 
+        r.year === year && r.semester === semester
+      );
+      
+      if (currentReport) {
+        reportId = currentReport.id;
+      } else {
+        // 기존 기록이 없으면 새로 생성
+        const newReportData = {
+          year,
+          semester,
+          student_id: Number(studentId),
+          // 요약 정보를 기반으로 초기 데이터 설정
+          behavior_summary: summary?.behavior !== "-" ? summary.behavior : null,
+          teacher_feedback: "AI 생성 대기 중...",
+          peer_relation: null,
+          career_aspiration: null
+        };
+        
+        const createResponse = await getJSON(apiUrl(`school_report/`), {
+          method: "POST",
+          body: JSON.stringify(newReportData),
+        });
+        
+        const newReport = unwrap(createResponse);
+        reportId = newReport?.id;
+      }
     } catch (e) {
-      console.error("코멘트 생성 실패:", e);
-      setComment("코멘트 생성에 실패했습니다. 내용을 확인 후 다시 시도해주세요.");
-    } finally {
-      setGenerating(false);
+      console.warn("기존 생활기록 조회/생성 실패:", e);
+      // 기존 방식으로 폴백
+      throw new Error("생활기록부 데이터를 준비할 수 없습니다.");
     }
-  };
+    
+    if (!reportId) {
+      throw new Error("생활기록부 ID를 얻을 수 없습니다.");
+    }
+    
+    // 2) 생성 옵션 설정 (사용자 설정 가능하도록 확장 가능)
+    const generateRequest = {
+      tone: "정중하고 공식적",        // 기본값
+      length: "표준",                 // 기본값 
+      focus_areas: ["행동특성", "또래관계", "진로희망"], // 모든 영역 포함
+      include_suggestions: true,      // 개선 제안 포함
+      academic_context: summary?.grades !== "-" ? `성적 현황: ${summary.grades}` : null
+    };
+    
+    // 3) AI 코멘트 생성 API 호출
+    const response = await getJSON(apiUrl(`school_report/${reportId}/generate-comment`), {
+      method: "POST",
+      body: JSON.stringify(generateRequest),
+    });
+    
+    // 4) 응답 처리
+    const result = unwrap(response);
+    
+    if (result?.success === false) {
+      throw new Error(result?.error?.message || result?.message || "생성에 실패했습니다.");
+    }
+    
+    const generatedText = result?.generated_comment || 
+                         result?.data?.generated_comment || 
+                         result?.comment;
+    
+    if (!generatedText) {
+      throw new Error("생성된 코멘트를 찾을 수 없습니다.");
+    }
+    
+    // 5) 생성된 코멘트 설정
+    setComment(generatedText);
+    
+    // 6) 성공 피드백 (선택사항)
+    const metadata = result?.data;
+    if (metadata?.character_count) {
+      console.log(`코멘트 생성 완료: ${metadata.character_count}자, ${metadata.word_count}단어`);
+    }
+    
+  } catch (e) {
+    console.error("코멘트 생성 실패:", e);
+    
+    // 사용자 친화적인 에러 메시지
+    let errorMessage = "코멘트 생성에 실패했습니다.";
+    
+    if (e.message?.includes("환경변수")) {
+      errorMessage = "AI 서비스 설정에 문제가 있습니다. 관리자에게 문의해주세요.";
+    } else if (e.message?.includes("생활기록")) {
+      errorMessage = "생활기록 데이터를 불러올 수 없습니다. 학생 정보를 다시 확인해주세요.";
+    } else if (e.message?.includes("부족")) {
+      errorMessage = "생성할 수 있는 정보가 부족합니다. 더 많은 정보를 입력한 후 시도해주세요.";
+    } else if (e.message) {
+      errorMessage = e.message;
+    }
+    
+    setComment(`❌ ${errorMessage}\n\n다음을 확인해보세요:\n• 학생의 기본 정보가 입력되어 있는지\n• 네트워크 연결이 안정적인지\n• 잠시 후 다시 시도해보세요`);
+    
+  } finally {
+    setGenerating(false);
+  }
+};
+
+// --- 추가: 코멘트 생성 전 미리보기 함수 (선택사항) --------------
+const handlePreviewGeneration = async () => {
+  if (!studentId) return;
+  
+  try {
+    // 기존 생활기록부 찾기
+    const existingReports = await getJSON(apiUrl(`school_report/student/${studentId}`));
+    const reports = unwrap(existingReports) || [];
+    const currentReport = reports.find(r => r.year === year && r.semester === semester);
+    
+    if (currentReport) {
+      const previewResponse = await getJSON(apiUrl(`school_report/${currentReport.id}/generate-preview`));
+      const preview = unwrap(previewResponse);
+      
+      if (preview?.data?.generation_ready) {
+        console.log("생성 가능한 콘텐츠:", preview.data.available_content);
+        return true;
+      } else {
+        alert("생성할 수 있는 정보가 부족합니다. 더 많은 데이터를 입력해주세요.");
+        return false;
+      }
+    }
+    return true;
+  } catch (e) {
+    console.warn("미리보기 확인 실패:", e);
+    return true; // 미리보기 실패해도 생성은 시도
+  }
+};
 
   // --- 저장: 생활기록부 코멘트 -----------------------------------
   const handleSave = async () => {
