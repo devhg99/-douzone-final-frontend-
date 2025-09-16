@@ -13,7 +13,14 @@ export default function HeroBanner({
   icon = null,
 }) {
   const label = ctaText ?? ctaLabel ?? "AI 챗봇과 대화 시작하기";
-  const handleClick = onClickCta ?? onCtaClick;
+  
+  const handleClick = () => {
+    // 헤더의 챗봇 버튼 클릭 이벤트를 트리거
+    const chatButton = document.querySelector('[aria-label="채팅 토글"]');
+    if (chatButton) {
+      chatButton.click();
+    }
+  };
 
   return (
     <section
@@ -35,21 +42,57 @@ export default function HeroBanner({
       <button
         type="button"
         onClick={handleClick}
-        className="group inline-flex items-center gap-2.5 rounded-full border border-white bg-white/20 px-8 py-4 backdrop-blur-[5px] transition-colors hover:bg-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+        className="group inline-flex items-center gap-2.5 rounded-full border border-white bg-white/20 px-4 py-2 backdrop-blur-[5px] transition-colors hover:bg-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
       >
-        {/* Builder의 SVG 아이콘은 <defs> 충돌 우려가 있어 Tailwind로 동일 톤을 재현 */}
-        {icon ?? (
-          <span className="relative inline-flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-[#667EEA] to-[#764BA2]">
-            <span className="relative flex h-4 w-6 items-center justify-center rounded-sm bg-white">
-              <span className="absolute top-0 h-2 w-1 rounded-sm bg-gradient-to-b from-[#667EEA] to-[#764BA2]" />
-              <span className="absolute bottom-1 h-1 w-2 rounded-sm bg-[#764BA2]" />
-            </span>
-            <span className="absolute -top-0.5 h-2 w-1 rounded-sm bg-white" />
-            <span className="absolute -top-1 h-0.5 w-0.5 rounded-full bg-white" />
-            <span className="absolute -left-1 top-1 h-0.5 w-0.5 rounded-full bg-[#764BA2]" />
-            <span className="absolute -right-1 top-1 h-0.5 w-0.5 rounded-full bg-[#764BA2]" />
-          </span>
-        )}
+         {/* Chatbot Icon */}
+         {icon ?? (
+           <svg
+             width="56"
+             height="56"
+             viewBox="0 0 73 72"
+             fill="none"
+             xmlns="http://www.w3.org/2000/svg"
+             className="w-14 h-14"
+           >
+             <path
+               d="M37.7568 8H34.7568C22.3304 8 12.2568 18.0736 12.2568 30.5V33.5C12.2568 45.9264 22.3304 56 34.7568 56H37.7568C50.1832 56 60.2568 45.9264 60.2568 33.5V30.5C60.2568 18.0736 50.1832 8 37.7568 8Z"
+               fill="url(#paint0_linear_287_2414)"
+             />
+             <path
+               d="M36.2568 23C36.8091 23 37.2568 22.5523 37.2568 22C37.2568 21.4477 36.8091 21 36.2568 21C35.7046 21 35.2568 21.4477 35.2568 22C35.2568 22.5523 35.7046 23 36.2568 23Z"
+               fill="white"
+             />
+             <path
+               d="M42.2568 26H30.2568C29.1523 26 28.2568 26.8954 28.2568 28V36C28.2568 37.1046 29.1523 38 30.2568 38H42.2568C43.3614 38 44.2568 37.1046 44.2568 36V28C44.2568 26.8954 43.3614 26 42.2568 26Z"
+               fill="white"
+             />
+             <path
+               d="M32.2568 31.5C33.0853 31.5 33.7568 30.8284 33.7568 30C33.7568 29.1716 33.0853 28.5 32.2568 28.5C31.4284 28.5 30.7568 29.1716 30.7568 30C30.7568 30.8284 31.4284 31.5 32.2568 31.5Z"
+               fill="#764BA2"
+             />
+             <path
+               d="M40.2568 31.5C41.0853 31.5 41.7568 30.8284 41.7568 30C41.7568 29.1716 41.0853 28.5 40.2568 28.5C39.4284 28.5 38.7568 29.1716 38.7568 30C38.7568 30.8284 39.4284 31.5 40.2568 31.5Z"
+               fill="#764BA2"
+             />
+             <path
+               d="M37.7568 33H34.7568C34.4807 33 34.2568 33.2239 34.2568 33.5C34.2568 33.7761 34.4807 34 34.7568 34H37.7568C38.033 34 38.2568 33.7761 38.2568 33.5C38.2568 33.2239 38.033 33 37.7568 33Z"
+               fill="#764BA2"
+             />
+             <defs>
+               <linearGradient
+                 id="paint0_linear_287_2414"
+                 x1="12.2568"
+                 y1="8"
+                 x2="60.2568"
+                 y2="56"
+                 gradientUnits="userSpaceOnUse"
+               >
+                 <stop stopColor="#667EEA" />
+                 <stop offset="1" stopColor="#764BA2" />
+               </linearGradient>
+             </defs>
+           </svg>
+         )}
 
         <span className="text-white text-center text-xl font-bold leading-normal">
           {label}
@@ -58,3 +101,6 @@ export default function HeroBanner({
     </section>
   );
 }
+
+
+
