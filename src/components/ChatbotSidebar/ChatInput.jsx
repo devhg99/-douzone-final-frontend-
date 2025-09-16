@@ -1,13 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 const ChatInput = ({ onSendMessage, disabled = false }) => {
   const [message, setMessage] = useState('');
+  const inputRef = useRef(null);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (message.trim() && !disabled) {
       onSendMessage?.(message);
       setMessage('');
+      // 메시지 전송 후 입력창에 포커스 유지
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
+      }, 100);
     }
   };
 
@@ -18,10 +25,18 @@ const ChatInput = ({ onSendMessage, disabled = false }) => {
     }
   };
 
+  // 컴포넌트 마운트 시 입력창에 자동 포커스
+  useEffect(() => {
+    if (inputRef.current && !disabled) {
+      inputRef.current.focus();
+    }
+  }, [disabled]);
+
   return (
     <form onSubmit={handleSubmit} className="w-full">
       <div className="relative">
         <input
+          ref={inputRef}
           type="text"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
