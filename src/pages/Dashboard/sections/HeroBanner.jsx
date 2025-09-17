@@ -3,7 +3,7 @@ import React from "react";
 
 export default function HeroBanner({
   title = "6학년 3반 김선생님 환영합니다! 👋",
-  subtitle = "AI 교사 업무 지원 시스템으로 업무 효율성을 높여보세요",
+  subtitle = "AI 교사 업무 지원 시스템으로 업무 효율성을 높여보세요.",
   ctaLabel,        // 기존 프로젝트 명칭
   ctaText,         // Builder export 명칭
   onClickCta,      // 기존 프로젝트 명칭
