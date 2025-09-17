@@ -18,7 +18,7 @@ export default function QuickActions({ actions = [] }) {
     : [
         { icon: counselIcon, label: "상담일지 작성", to: "/Counseling" },
         { icon: examIcon, label: "시험지 출제", to: "/Problem-writing" },
-        { icon: letterIcon, label: "가정통신문 작성", to: "/letter/new" },
+        { icon: letterIcon, label: "학급일정", to: "/Schedule" },
         { icon: lifeRecordIcon, label: "생활기록부 작성", to: "/LifeRecord" },
       ];
 
