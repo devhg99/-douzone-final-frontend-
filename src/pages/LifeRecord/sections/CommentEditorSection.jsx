@@ -6,7 +6,7 @@ export default function CommentEditorSection({
   placeholder = "내용을 입력하세요...",
   value = "",
   onChange = () => {},
-  maxLength = 500,
+  maxLength = 700,
   // ⬇ 추가: 생성 버튼 제어
   onGenerate,
   generating = false,
