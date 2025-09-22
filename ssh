@@ -1,0 +1,12 @@
+Host web-ec2
+    HostName <public ip>
+    User ubuntu
+    IdentityFile 'C:\Users\user\<pem파일명>.pem'
+
+Host app-ec2
+    HostName <private ip>
+    port 22
+    User ubuntu
+    IdentityFile 'C:\Users\user\<pem파일명>.pem'
+    ProxyJump web-ec2
+    LocalForward 22 <EC2public DNS>:22
